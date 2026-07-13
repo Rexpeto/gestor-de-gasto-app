@@ -9,8 +9,11 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
+import ToastMessage from 'react-native-toast-message';
+
 import { HeroUINativeProvider } from 'heroui-native/provider';
 import { AddTransactionSheet } from '@/components/AddTransactionSheet';
+import { toastConfig } from '@/components/ThemedToast';
 import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors, useThemeStore } from '@/store/theme-store';
@@ -125,6 +128,9 @@ export default function RootLayout() {
               initialType={sheetType}
               onClose={closeSheet}
             />
+
+            {/* Toast notifications - POR ENCIMA de todo */}
+            <ToastMessage config={toastConfig} />
           </View>
         </HeroUINativeProvider>
       </BottomSheetModalProvider>

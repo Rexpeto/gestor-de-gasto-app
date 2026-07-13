@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FolderOpen, Plus } from 'lucide-react-native/icons';
+import { CategoryIcon } from '@/components/CategoryIcon';
+import { showErrorToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
 import type { Category, TransactionType } from '@/types';
 import { useThemeColors } from '@/store/theme-store';
@@ -37,7 +39,7 @@ export default function CategoriesScreen() {
             } catch (error: unknown) {
               const message =
                 error instanceof Error ? error.message : 'Error al eliminar';
-              Alert.alert('Error', message);
+              showErrorToast(message);
             }
           },
         },
@@ -138,7 +140,7 @@ export default function CategoriesScreen() {
                   className="w-12 h-12 rounded-xl items-center justify-center"
                   style={{ backgroundColor: cat.color + '20' }}
                 >
-                  <Text style={{ fontSize: 22 }}>{cat.icon}</Text>
+                  <CategoryIcon name={cat.icon} size={22} color={cat.color} />
                 </View>
                 <View className="flex-1 ml-3">
                   <Text

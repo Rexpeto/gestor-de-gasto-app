@@ -31,7 +31,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      icon TEXT NOT NULL DEFAULT '📦',
+      icon TEXT NOT NULL DEFAULT 'circle-question-mark',
       color TEXT NOT NULL DEFAULT '#6366f1',
       type TEXT NOT NULL CHECK(type IN ('income', 'expense'))
     );
@@ -74,6 +74,17 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       'INSERT OR REPLACE INTO _migrations (version) VALUES (2)'
     );
   }
+
+  // Migration v3: replace emoji icons with Lucide icon names
+  const currentVersionV3 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV3?.version || currentVersionV3.version < 3) {
+    await migrateEmojiToLucideIconsV3(database);
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (3)'
+    );
+  }
 }
 
 const CURATED_INCOME_CATEGORIES: Array<{
@@ -82,11 +93,11 @@ const CURATED_INCOME_CATEGORIES: Array<{
   color: string;
   type: TransactionType;
 }> = [
-  { name: 'Salario', icon: '💰', color: '#22c55e', type: 'income' },
-  { name: 'Freelance', icon: '💻', color: '#3b82f6', type: 'income' },
-  { name: 'Ventas', icon: '🛒', color: '#f59e0b', type: 'income' },
-  { name: 'Inversiones', icon: '📈', color: '#8b5cf6', type: 'income' },
-  { name: 'Otros ingresos', icon: '📥', color: '#06b6d4', type: 'income' },
+  { name: 'Salario', icon: 'briefcase', color: '#22c55e', type: 'income' },
+  { name: 'Freelance', icon: 'laptop', color: '#3b82f6', type: 'income' },
+  { name: 'Ventas', icon: 'store', color: '#f59e0b', type: 'income' },
+  { name: 'Inversiones', icon: 'trending-up', color: '#8b5cf6', type: 'income' },
+  { name: 'Otros ingresos', icon: 'arrow-down-left', color: '#06b6d4', type: 'income' },
 ];
 
 async function seedDefaultCategories(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -99,15 +110,15 @@ async function seedDefaultCategories(database: SQLite.SQLiteDatabase): Promise<v
     // Income — curated
     ...CURATED_INCOME_CATEGORIES,
     // Expenses
-    { name: 'Alimentación', icon: '🍽️', color: '#ef4444', type: 'expense' },
-    { name: 'Transporte', icon: '🚗', color: '#f97316', type: 'expense' },
-    { name: 'Vivienda', icon: '🏠', color: '#eab308', type: 'expense' },
-    { name: 'Servicios', icon: '💡', color: '#a855f7', type: 'expense' },
-    { name: 'Salud', icon: '🏥', color: '#ec4899', type: 'expense' },
-    { name: 'Entretenimiento', icon: '🎬', color: '#14b8a6', type: 'expense' },
-    { name: 'Compras', icon: '🛍️', color: '#f43f5e', type: 'expense' },
-    { name: 'Educación', icon: '📚', color: '#6366f1', type: 'expense' },
-    { name: 'Otros gastos', icon: '📤', color: '#78716c', type: 'expense' },
+    { name: 'Alimentación', icon: 'utensils-crossed', color: '#ef4444', type: 'expense' },
+    { name: 'Transporte', icon: 'car', color: '#f97316', type: 'expense' },
+    { name: 'Vivienda', icon: 'house', color: '#eab308', type: 'expense' },
+    { name: 'Servicios', icon: 'zap', color: '#a855f7', type: 'expense' },
+    { name: 'Salud', icon: 'heart-pulse', color: '#ec4899', type: 'expense' },
+    { name: 'Entretenimiento', icon: 'gamepad-2', color: '#14b8a6', type: 'expense' },
+    { name: 'Compras', icon: 'shopping-bag', color: '#f43f5e', type: 'expense' },
+    { name: 'Educación', icon: 'book-open', color: '#6366f1', type: 'expense' },
+    { name: 'Otros gastos', icon: 'ellipsis', color: '#78716c', type: 'expense' },
   ];
 
   for (const cat of defaultCategories) {
@@ -153,6 +164,44 @@ async function migrateIncomeCategoriesV2(database: SQLite.SQLiteDatabase): Promi
     `DELETE FROM categories WHERE id IN (${placeholders})`,
     oldIncomeIds,
   );
+}
+
+async function migrateEmojiToLucideIconsV3(
+  database: SQLite.SQLiteDatabase
+): Promise<void> {
+  const EMOJI_TO_LUCIDE: Record<string, string> = {
+    '💰': 'briefcase',
+    '💻': 'laptop',
+    '🛒': 'store',
+    '📈': 'trending-up',
+    '📥': 'arrow-down-left',
+    '🍽️': 'utensils-crossed',
+    '🚗': 'car',
+    '🏠': 'house',
+    '💡': 'zap',
+    '🏥': 'heart-pulse',
+    '🎬': 'gamepad-2',
+    '🛍️': 'shopping-bag',
+    '📚': 'book-open',
+    '📤': 'ellipsis',
+    '🎮': 'gamepad-2',
+    '☕': 'coffee',
+    '✈️': 'plane',
+    '👕': 'shirt',
+    '💊': 'pill',
+    '🎓': 'graduation-cap',
+    '🏋️': 'dumbbell',
+    '🐾': 'paw-print',
+    '🎁': 'gift',
+    '💎': 'gem',
+  };
+
+  for (const [emoji, lucide] of Object.entries(EMOJI_TO_LUCIDE)) {
+    await database.runAsync(
+      'UPDATE categories SET icon = ? WHERE icon = ?',
+      [lucide, emoji]
+    );
+  }
 }
 
 // ─── Transaction Queries ───────────────────────────────────────
@@ -515,7 +564,7 @@ export async function resetDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      icon TEXT NOT NULL DEFAULT '📦',
+      icon TEXT NOT NULL DEFAULT 'circle-question-mark',
       color TEXT NOT NULL DEFAULT '#6366f1',
       type TEXT NOT NULL CHECK(type IN ('income', 'expense'))
     );

@@ -2,20 +2,19 @@ import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { Action } from '@/components/Action';
+import { CategoryIcon } from '@/components/CategoryIcon';
+import { CreditCard } from '@/components/CreditCard';
 import { useCategoryStore } from '@/store/category-store';
 import { useSheetStore } from '@/store/sheet-store';
+import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { Transaction } from '@/types';
-import { useThemeColors } from '@/store/theme-store';
 import {
   ArrowDownLeft,
-  CreditCard,
+  CreditCard as CreditCardIcon,
   Inbox,
-  ListFilter,
-  Plus,
-  Repeat,
-  TrendingDown,
-  TrendingUp,
+  ListFilter
 } from 'lucide-react-native/icons';
 
 const formatCurrency = (amount: number): string =>
@@ -59,7 +58,7 @@ export function TransactionRow({
         className="w-10 h-10 rounded-full items-center justify-center"
         style={{ backgroundColor: (category?.color ?? '#6366f1') + '20' }}
       >
-        <Text style={{ fontSize: 18 }}>{category?.icon ?? '📦'}</Text>
+        <CategoryIcon name={category?.icon ?? 'circle-question-mark'} size={18} color={category?.color} />
       </View>
       <View className="flex-1 ml-3">
         <Text
@@ -132,223 +131,27 @@ export default function DashboardScreen() {
 
         {/* ── Hero Balance Card ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
-          <View
-            style={{
-              backgroundColor: colors.glassSurface,
-              borderWidth: 1,
-              borderColor: colors.glassBorder,
-              borderRadius: 12,
-              padding: 24,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Gradient blur decorations */}
-            <View
-              style={{
-                position: 'absolute',
-                top: -30,
-                right: -30,
-                width: 120,
-                height: 120,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}26`,
-              }}
-            />
-            <View
-              style={{
-                position: 'absolute',
-                bottom: -40,
-                left: -20,
-                width: 100,
-                height: 100,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}14`,
-              }}
-            />
-
-            {/* Label caps */}
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                letterSpacing: 0.1,
-                color: colors.onSurfaceVariant,
-                marginBottom: 4,
-              }}
-            >
-              Saldo Total
-            </Text>
-
-            {/* Main amount */}
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 40,
-                fontWeight: '700',
-                color: colors.onSurface,
-                letterSpacing: -0.02,
-              }}
-            >
-              {formatCurrency(balance)}
-            </Text>
-
-            {/* Bottom row: Ingresos + Gastos + Avatars */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: 20,
-              }}
-            >
-              {/* Left: income/expense pills */}
-              <View style={{ flexDirection: 'row', gap: 20 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingUp size={14} color={colors.primary} />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
-                    Ingresos
-                  </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.primary }}>
-                    {formatCurrency(totalIncome)}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingDown size={14} color={colors.error} />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
-                    Gastos
-                  </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.error }}>
-                    {formatCurrency(totalExpense)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Right: stacked avatars */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9999,
-                    backgroundColor: colors.surfaceContainer,
-                    borderWidth: 2,
-                    borderColor: colors.background,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: '700', color: colors.onSurface }}>
-                    VISA
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9999,
-                    backgroundColor: colors.primary,
-                    borderWidth: 2,
-                    borderColor: colors.background,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: -12,
-                  }}
-                >
-                  <Plus size={14} color={colors.onPrimary} />
-                </View>
-              </View>
-            </View>
-          </View>
+          <CreditCard
+            balance={balance}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
+          />
         </View>
 
         {/* ── Quick Actions ── */}
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 20 }}>
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: `${colors.primary}1A`,
-            }}
+          <Action
+            icon={ArrowDownLeft}
+            label="Ingresar"
             onPress={() => openSheet('income')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}26`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ArrowDownLeft size={20} color={colors.primary} />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Ingresar
-            </Text>
-          </Pressable>
+          />
 
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: 'rgba(138, 180, 248, 0.1)',
-            }}
+          <Action
+            icon={CreditCardIcon}
+            label="Gasto"
+            color="#ce93d8"
             onPress={() => openSheet('expense')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: 'rgba(138, 180, 248, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Repeat size={20} color="#8ab4f8" />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Transferir
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: 'rgba(206, 147, 216, 0.1)',
-            }}
-            onPress={() => openSheet('expense')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: 'rgba(206, 147, 216, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CreditCard size={20} color="#ce93d8" />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Pagar
-            </Text>
-          </Pressable>
+          />
         </View>
 
         {/* ── Gastos por Categoría ── */}
@@ -403,7 +206,7 @@ export default function DashboardScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ fontSize: 18 }}>{cat.categoryIcon}</Text>
+                      <CategoryIcon name={cat.categoryIcon} size={18} color={cat.categoryColor} />
                     </View>
 
                     {/* Name + amounts */}

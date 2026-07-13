@@ -15,6 +15,7 @@ import {
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { resetDatabase } from '@/db/database';
+import { showSuccessToast, showErrorToast } from '@/components/ThemedToast';
 import { useThemeColors, useThemeStore, type ThemeMode } from '@/store/theme-store';
 import { useBudgetStore } from '@/store/budget-store';
 import { useTransactionStore } from '@/store/transaction-store';
@@ -475,7 +476,7 @@ export default function SettingsScreen() {
             elevation: 8,
           }}
           onPress={() => {
-            /* TODO: persist settings */
+            showSuccessToast('Configuración guardada');
           }}
         >
           <View className="flex-row items-center gap-2">
@@ -516,9 +517,9 @@ export default function SettingsScreen() {
                         useTransactionStore.getState().loadMonthlySummary(),
                         useTransactionStore.getState().loadCategorySummaries(),
                       ]);
-                      Alert.alert('Listo', 'Base de datos restablecida con los valores por defecto.');
+                      showSuccessToast('Base de datos restablecida');
                     } catch {
-                      Alert.alert('Error', 'No se pudo restablecer la base de datos');
+                      showErrorToast('No se pudo restablecer la base de datos');
                     }
                   },
                 },

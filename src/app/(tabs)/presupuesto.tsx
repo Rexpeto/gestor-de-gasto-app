@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Plus, Trash2, ArrowLeft, PiggyBank, Settings2 } from 'lucide-react-native/icons';
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 import { useBudgetStore } from '@/store/budget-store';
 import { useCategoryStore } from '@/store/category-store';
@@ -224,7 +225,7 @@ export default function PresupuestoScreen() {
                       className="w-10 h-10 rounded-xl items-center justify-center"
                       style={{ backgroundColor: cat.color + '20' }}
                     >
-                      <Text style={{ fontSize: 20 }}>{cat.icon}</Text>
+                      <CategoryIcon name={cat.icon} size={20} color={cat.color} />
                     </View>
 
                     <View className="flex-1">

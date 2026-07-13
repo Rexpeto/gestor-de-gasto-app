@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Plus, Search, Inbox } from 'lucide-react-native/icons';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { useCategoryStore } from '@/store/category-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { Transaction, TransactionType } from '@/types';
@@ -182,7 +183,7 @@ export default function TransactionsScreen() {
                           justifyContent: 'center',
                           marginRight: 16
                         }}>
-                          <Text style={{ fontSize: 20, color: cat?.color || '#57f1db' }}>{cat?.icon || '•'}</Text>
+                          <CategoryIcon name={cat?.icon ?? 'circle-question-mark'} size={20} color={cat?.color} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontFamily: 'Inter', fontSize: 15, fontWeight: '600', color: colors.onSurface }}>{tx.description}</Text>

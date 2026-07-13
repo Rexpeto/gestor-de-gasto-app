@@ -4,7 +4,6 @@ import { Input } from 'heroui-native/input';
 import { Label } from 'heroui-native/label';
 import { TextField } from 'heroui-native/text-field';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import { CategoryIcon, ICON_NAMES } from '@/components/CategoryIcon';
+import { showSuccessToast, showErrorToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors } from '@/store/theme-store';
 import type { TransactionType } from '@/types';
@@ -29,16 +30,12 @@ const PRESET_COLORS = [
   '#f43f5e', '#78716c', '#64748b',
 ];
 
-const PRESET_ICONS = [
-  '🍽️', '🚗', '🏠', '💡', '🏥', '🎬', '🛍️', '📚',
-  '💰', '💻', '📈', '🛒', '📥', '📤', '🎮', '☕',
-  '✈️', '👕', '💊', '🎓', '🏋️', '🐾', '🎁', '💎',
-];
+const PRESET_ICONS = ICON_NAMES;
 
 export default function AddCategoryScreen() {
   const addCategory = useCategoryStore((s) => s.addCategory);
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('📦');
+  const [icon, setIcon] = useState('circle-question-mark');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [type, setType] = useState<TransactionType>('expense');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,16 +43,17 @@ export default function AddCategoryScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Ingresá un nombre para la categoría');
+      showErrorToast('Ingresá un nombre para la categoría');
       return;
     }
 
     setIsSubmitting(true);
     try {
       await addCategory({ name: name.trim(), icon, color, type });
+      showSuccessToast('Categoría creada');
       router.back();
     } catch {
-      Alert.alert('Error', 'No se pudo crear la categoría');
+      showErrorToast('No se pudo crear la categoría');
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +148,11 @@ export default function AddCategoryScreen() {
               }}
               onPress={() => setIcon(ic)}
             >
-              <Text style={{ fontSize: 20 }}>{ic}</Text>
+              <CategoryIcon
+                  name={ic}
+                  size={20}
+                  color={icon === ic ? colors.primary : colors.onSurfaceVariant}
+                />
             </Pressable>
           ))}
         </View>
@@ -191,7 +193,7 @@ export default function AddCategoryScreen() {
               borderColor: colors.glassBorder,
             }}
           >
-            <Text style={{ fontSize: 36 }}>{icon}</Text>
+            <CategoryIcon name={icon} size={36} color={color} />
           </View>
           <Text
             className="font-medium mt-2"

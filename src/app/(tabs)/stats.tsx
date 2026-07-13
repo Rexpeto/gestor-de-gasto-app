@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react-native/icons';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -277,7 +278,7 @@ export default function StatsScreen() {
                     className="w-12 h-12 rounded-full items-center justify-center"
                     style={{ backgroundColor: cat.categoryColor + '20' }}
                   >
-                    <Text style={{ fontSize: 22 }}>{cat.categoryIcon}</Text>
+                    <CategoryIcon name={cat.categoryIcon} size={22} color={cat.categoryColor} />
                   </View>
 
                   {/* Content */}

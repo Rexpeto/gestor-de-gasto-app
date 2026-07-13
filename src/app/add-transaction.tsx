@@ -1,11 +1,15 @@
+import { AmountDisplay } from '@/components/AmountDisplay';
+import { CategoryPicker } from '@/components/CategoryPicker';
+import { NumericKeyboard } from '@/components/NumericKeyboard';
+import { PaymentMethodPicker } from '@/components/PaymentMethodPicker';
 import { useCategoryStore } from '@/store/category-store';
+import { showSuccessToast, showErrorToast } from '@/components/ThemedToast';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Dimensions,
   Pressable,
@@ -18,12 +22,6 @@ import {
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.92;
-
-const PAYMENT_METHODS = [
-  { id: 'bsc', label: '$ BCV' },
-  { id: 'eur', label: '€ BCV' },
-  { id: 'usdt', label: 'USDT' },
-];
 
 const MONTHS_ES = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -115,11 +113,11 @@ export default function AddTransactionScreen() {
   const handleSubmit = useCallback(async () => {
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert('Error', 'Ingresá un monto válido mayor a 0');
+      showErrorToast('Ingresá un monto válido mayor a 0');
       return;
     }
     if (!categoryId) {
-      Alert.alert('Error', 'Seleccioná una categoría');
+      showErrorToast('Seleccioná una categoría');
       return;
     }
 
@@ -142,22 +140,16 @@ export default function AddTransactionScreen() {
           date,
         });
       }
+      showSuccessToast('Transacción guardada');
       router.back();
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la transacción');
+      showErrorToast('No se pudo guardar la transacción');
     } finally {
       setIsSubmitting(false);
     }
   }, [amount, categoryId, date, description, editTransaction, id, isEditing, addTransaction, txType]);
 
   const displayAmount = amount === '' ? '0' : amount;
-
-  const keyboardRows = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ['.', '0', 'backspace'],
-  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
@@ -235,169 +227,20 @@ export default function AddTransactionScreen() {
             </View>
 
             {/* Amount display */}
-            <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  fontWeight: '600',
-                  color: colors.onSurfaceVariant,
-                  textTransform: 'uppercase',
-                  letterSpacing: 1.2,
-                  marginBottom: 8,
-                }}
-              >
-                MONTO TOTAL
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter',
-                    fontSize: 28,
-                    fontWeight: '600',
-                    color: colors.primary,
-                    marginBottom: 4,
-                  }}
-                >
-                  $
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 64,
-                    fontWeight: 'bold',
-                    color: colors.onSurface,
-                    lineHeight: 72,
-                  }}
-                >
-                  {displayAmount}
-                </Text>
-              </View>
-            </View>
+            <AmountDisplay amount={displayAmount} currency={paymentMethod} />
 
             {/* Category chips */}
-            <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  fontWeight: '600',
-                  color: colors.onSurfaceVariant,
-                  textTransform: 'uppercase',
-                  letterSpacing: 1.2,
-                  marginBottom: 10,
-                }}
-              >
-                Categoría
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-              >
-                {filteredCategories.map((cat) => {
-                  const active = cat.id === categoryId;
-                  return (
-                    <Pressable
-                      key={cat.id}
-                      onPress={() => setCategoryId(cat.id)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: 14,
-                        paddingVertical: 10,
-                        borderRadius: 9999,
-                        borderWidth: 1,
-                        gap: 6,
-                        backgroundColor: active
-                          ? colors.primary + '33'
-                          : colors.surfaceContainerHigh,
-                        borderColor: active
-                          ? colors.primary + '4D'
-                          : colors.glassBorder,
-                        shadowColor: active ? colors.primary : 'transparent',
-                        shadowOpacity: active ? 0.25 : 0,
-                        shadowRadius: active ? 8 : 0,
-                        shadowOffset: { width: 0, height: 0 },
-                      }}
-                    >
-                      <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
-                      <Text
-                        style={{
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: '500',
-                          color: active ? colors.primary : colors.onSurfaceVariant,
-                        }}
-                      >
-                        {cat.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <CategoryPicker
+              categories={filteredCategories}
+              value={categoryId}
+              onChange={setCategoryId}
+            />
 
             {/* Payment method chips */}
-            <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  fontWeight: '600',
-                  color: colors.onSurfaceVariant,
-                  textTransform: 'uppercase',
-                  letterSpacing: 1.2,
-                  marginBottom: 10,
-                }}
-              >
-                Método de Pago
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-              >
-                {PAYMENT_METHODS.map((pm) => {
-                  const active = pm.id === paymentMethod;
-                  return (
-                    <Pressable
-                      key={pm.id}
-                      onPress={() => setPaymentMethod(pm.id)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: 14,
-                        paddingVertical: 10,
-                        borderRadius: 9999,
-                        borderWidth: 1,
-                        backgroundColor: active
-                          ? colors.primary + '33'
-                          : colors.surfaceContainerHigh,
-                        borderColor: active
-                          ? colors.primary + '4D'
-                          : colors.glassBorder,
-                        shadowColor: active ? colors.primary : 'transparent',
-                        shadowOpacity: active ? 0.25 : 0,
-                        shadowRadius: active ? 8 : 0,
-                        shadowOffset: { width: 0, height: 0 },
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: '500',
-                          color: active ? colors.primary : colors.onSurfaceVariant,
-                        }}
-                      >
-                        {pm.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+            <PaymentMethodPicker
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+            />
 
             {/* Date + Notes row */}
             <View
@@ -470,53 +313,10 @@ export default function AddTransactionScreen() {
             </View>
 
             {/* Custom numeric keyboard */}
-            <View style={{ paddingHorizontal: 20 }}>
-              {keyboardRows.map((row, rowIdx) => (
-                <View
-                  key={rowIdx}
-                  style={{
-                    flexDirection: 'row',
-                    gap: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  {row.map((key) => {
-                    const isBackspace = key === 'backspace';
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => handleKeyPress(key)}
-                        style={{
-                          flex: 1,
-                          height: 64,
-                          borderRadius: 16,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          backgroundColor: isBackspace
-                            ? colors.error + '1A'
-                            : colors.glassBorder,
-                        }}
-                        android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
-                      >
-                        <Text
-                          style={{
-                            fontFamily: 'Inter',
-                            fontSize: isBackspace ? 18 : 22,
-                            fontWeight: '600',
-                            color: isBackspace ? colors.error : colors.onSurface,
-                          }}
-                        >
-                          {isBackspace ? '⌫' : key}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
+            <NumericKeyboard onKeyPress={handleKeyPress} />
 
             {/* Save button */}
-            <View style={{ paddingHorizontal: 20, paddingBottom: 80 }}>
+            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 80 }}>
               <Pressable
                 onPress={handleSubmit}
                 disabled={isSubmitting}

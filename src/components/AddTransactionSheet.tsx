@@ -1,29 +1,35 @@
+import { ArrowRight, CalendarDays, Pencil } from 'lucide-react-native/icons';
+
+import { AmountDisplay } from '@/components/AmountDisplay';
+import { CategoryPicker } from '@/components/CategoryPicker';
+import { NumericKeyboard } from '@/components/NumericKeyboard';
+import { PaymentMethodPicker } from '@/components/PaymentMethodPicker';
+import { showErrorToast, showSuccessToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-
-const PAYMENT_METHODS = [
-  { id: 'bsc', label: '$ BCV' },
-  { id: 'eur', label: '€ BCV' },
-  { id: 'usdt', label: 'USDT' },
-];
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 const MONTHS_ES = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
 ];
 
-function todayFormatted(): string {
-  const d = new Date();
-  return `Hoy, ${d.getDate()} ${MONTHS_ES[d.getMonth()]}`;
-}
+function formatDateDisplay(date: Date): string {
+  const today = new Date();
+  const isToday =
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
 
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  const prefix = isToday ? 'Hoy, ' : '';
+  return `${prefix}${date.getDate()} ${MONTHS_ES[date.getMonth()]}`;
 }
 
 function isDigitsOnly(ch: string): boolean {
@@ -52,7 +58,8 @@ export const AddTransactionSheet = ({
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(todayISO);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('bsc');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contentKey, setContentKey] = useState(0);
@@ -65,7 +72,8 @@ export const AddTransactionSheet = ({
       setAmount('');
       setCategoryId(null);
       setDescription('');
-      setDate(todayISO);
+      setSelectedDate(new Date());
+      setShowDatePicker(false);
       setPaymentMethod('bsc');
       setIsSubmitting(false);
       setContentKey((k) => k + 1);
@@ -104,47 +112,48 @@ export const AddTransactionSheet = ({
   const handleSubmit = useCallback(async () => {
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert('Error', 'Ingresá un monto válido mayor a 0');
+      showErrorToast('Ingresá un monto válido mayor a 0');
       return;
     }
     if (!categoryId) {
-      Alert.alert('Error', 'Seleccioná una categoría');
+      showErrorToast('Seleccioná una categoría');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const dateISO = selectedDate.toISOString().split('T')[0];
       await addTransaction({
         amount: amountNum,
         type: txType,
         categoryId,
         description,
-        date,
+        date: dateISO,
       });
+      showSuccessToast('Transacción guardada');
       onClose();
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la transacción');
+      showErrorToast('No se pudo guardar la transacción');
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, categoryId, date, description, addTransaction, txType, onClose]);
+  }, [amount, categoryId, selectedDate, description, addTransaction, txType, onClose]);
+
+  const handleDateChange = useCallback(
+    (_event: DateTimePickerEvent, pickedDate?: Date) => {
+      setShowDatePicker(false);
+      if (pickedDate) setSelectedDate(pickedDate);
+    },
+    [],
+  );
 
   const displayAmount = amount === '' ? '0' : amount;
-
-  const keyboardRows = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ['.', '0', 'backspace'],
-  ];
-
-  const PADDING_2REM = 32;
 
   return (
     <BottomSheet
       ref={sheetRef}
       index={-1}
-      snapPoints={['100%']}
+      snapPoints={['98%']}
       enablePanDownToClose
       onChange={(index) => {
         if (index === -1) onClose();
@@ -179,13 +188,6 @@ export const AddTransactionSheet = ({
               paddingBottom: 16,
             }}
           >
-            <Pressable
-              onPress={() => sheetRef.current?.close()}
-              style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
-              hitSlop={12}
-            >
-              <Text style={{ fontFamily: 'Inter', fontSize: 20, color: colors.onSurfaceVariant }}>✕</Text>
-            </Pressable>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Text
                 style={{
@@ -197,175 +199,29 @@ export const AddTransactionSheet = ({
                 {title}
               </Text>
             </View>
-            <View style={{ width: 40 }} />
           </View>
 
           {/* Amount display */}
-          <View style={{ alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 }}>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: '600',
-                color: colors.onSurfaceVariant,
-                textTransform: 'uppercase',
-                letterSpacing: 1.2,
-                marginBottom: 8,
-              }}
-            >
-              MONTO TOTAL
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 28,
-                  fontWeight: '600',
-                  color: colors.primary,
-                  marginBottom: 4,
-                }}
-              >
-                $
-              </Text>
-              <Text
-                style={{
-                  fontFamily: 'Inter-Bold',
-                  fontSize: 64,
-                  fontWeight: 'bold',
-                  color: colors.onSurface,
-                  lineHeight: 72,
-                }}
-              >
-                {displayAmount}
-              </Text>
-            </View>
-          </View>
+          <AmountDisplay amount={displayAmount} currency={paymentMethod} />
 
           {/* Category chips — horizontal carousel */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: '600',
-                color: colors.onSurfaceVariant,
-                textTransform: 'uppercase',
-                letterSpacing: 1.2,
-                marginBottom: 10,
-              }}
-            >
-              Categoría
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {filteredCategories.map((cat) => {
-                const active = cat.id === categoryId;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    onPress={() => setCategoryId(cat.id)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      borderRadius: 9999,
-                      borderWidth: 1,
-                      gap: 6,
-                      backgroundColor: active
-                        ? colors.primary + '33'
-                        : colors.surfaceContainerHigh,
-                      borderColor: active
-                        ? colors.primary + '4D'
-                        : colors.glassBorder,
-                    }}
-                  >
-                    <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
-                    <Text
-                      style={{
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: '500',
-                        color: active ? colors.primary : colors.onSurfaceVariant,
-                      }}
-                    >
-                      {cat.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+          <CategoryPicker
+            categories={filteredCategories}
+            value={categoryId}
+            onChange={setCategoryId}
+          />
 
           {/* Payment method chips */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: '600',
-                color: colors.onSurfaceVariant,
-                textTransform: 'uppercase',
-                letterSpacing: 1.2,
-                marginBottom: 10,
-              }}
-            >
-              Método de Pago
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {PAYMENT_METHODS.map((pm) => {
-                const active = pm.id === paymentMethod;
-                return (
-                  <Pressable
-                    key={pm.id}
-                    onPress={() => setPaymentMethod(pm.id)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    borderRadius: 9999,
-                    borderWidth: 1,
-                    backgroundColor: active
-                      ? colors.primary + '33'
-                      : colors.surfaceContainerHigh,
-                    borderColor: active
-                      ? colors.primary + '4D'
-                      : colors.glassBorder,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: '500',
-                      color: active ? colors.primary : colors.onSurfaceVariant,
-                    }}
-                  >
-                    {pm.label}
-                  </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          <PaymentMethodPicker
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+          />
 
-          {/* Date + Notes row */}
-          <View
-            style={{
-              flexDirection: 'row',
-              paddingHorizontal: 20,
-              gap: 10,
-              marginBottom: 20,
-            }}
-          >
-            {/* Date */}
-            <View
+          {/* Date picker row */}
+          <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+            <Pressable
+              onPress={() => setShowDatePicker(true)}
               style={{
-                flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
                 backgroundColor: colors.surfaceContainerHigh,
@@ -377,24 +233,36 @@ export const AddTransactionSheet = ({
                 gap: 8,
               }}
             >
-              <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>📅</Text>
+              <CalendarDays size={16} color={colors.onSurfaceVariant} />
               <Text
                 style={{
                   fontFamily: 'Inter',
                   fontSize: 13,
                   color: colors.onSurface,
-                  flexShrink: 1,
                 }}
-                numberOfLines={1}
               >
-                {todayFormatted()}
+                {formatDateDisplay(selectedDate)}
               </Text>
-            </View>
+            </Pressable>
+          </View>
 
-            {/* Notes */}
+          {showDatePicker && (
+            <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="inline"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+                themeVariant="dark"
+              />
+            </View>
+          )}
+
+          {/* Description (full width) */}
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             <View
               style={{
-                flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
                 backgroundColor: colors.surfaceContainerHigh,
@@ -406,7 +274,7 @@ export const AddTransactionSheet = ({
                 gap: 8,
               }}
             >
-              <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>✏️</Text>
+              <Pencil size={16} color={colors.onSurfaceVariant} />
               <TextInput
                 placeholder="¿En qué gastaste?"
                 placeholderTextColor={colors.outline}
@@ -424,56 +292,13 @@ export const AddTransactionSheet = ({
           </View>
 
           {/* Custom numeric keyboard */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 0 }}>
-            {keyboardRows.map((row, rowIdx) => (
-              <View
-                key={rowIdx}
-                style={{
-                  flexDirection: 'row',
-                  gap: 8,
-                  marginBottom: 0,
-                }}
-              >
-                {row.map((key) => {
-                  const isBackspace = key === 'backspace';
-                  return (
-                    <Pressable
-                      key={key}
-                      onPress={() => handleKeyPress(key)}
-                      style={{
-                        flex: 1,
-                        height: 64,
-                        borderRadius: 16,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: isBackspace
-                          ? colors.error + '1A'
-                          : colors.glassBorder,
-                      }}
-                      android_ripple={{ color: colors.glassBorder }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: 'Inter',
-                          fontSize: isBackspace ? 18 : 22,
-                          fontWeight: '600',
-                          color: isBackspace ? colors.error : colors.onSurface,
-                        }}
-                      >
-                        {isBackspace ? '⌫' : key}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
+          <NumericKeyboard onKeyPress={handleKeyPress} />
 
           <View
           style={{
             paddingHorizontal: 20,
-            paddingTop: 30,
-            paddingBottom: PADDING_2REM,
+            paddingTop: 20,
+            paddingBottom: 20,
             backgroundColor: colors.background,
           }}
         >
@@ -508,7 +333,7 @@ export const AddTransactionSheet = ({
             >
               {saveLabel}
             </Text>
-            <Text style={{ fontSize: 18, color: colors.onPrimary }}>→</Text>
+            <ArrowRight size={18} color={colors.onPrimary} />
           </Pressable>
         </View>
         </BottomSheetScrollView>
