@@ -417,7 +417,7 @@ export default function PresupuestoScreen() {
           <Pressable
             className="w-full py-3.5 rounded-full items-center flex-row justify-center gap-2"
             style={{ backgroundColor: `${colors.primary}1F`, borderWidth: 1, borderColor: `${colors.primary}33` }}
-            onPress={() => router.push('/(tabs)/stats')}
+            onPress={() => router.back()}
           >
             <Text
               className="text-base font-semibold"

@@ -2,9 +2,9 @@ import { useThemeColors } from "@/store/theme-store";
 import { Tabs } from "expo-router";
 import {
     ChartBarBig,
+    SlidersHorizontal,
     LayoutDashboard,
     Receipt,
-    Settings,
 } from "lucide-react-native/icons";
 
 export default function TabLayout() {
@@ -75,23 +75,11 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="Categorías"
+                name="settings"
                 options={{
-                    href: null,
-                }}
-            />
-            <Tabs.Screen
-                name="Presupuesto"
-                options={{
-                    href: null,
-                }}
-            />
-            <Tabs.Screen
-                name="Ajustes"
-                options={{
-                    title: "Settings",
+                    title: "Ajustes",
                     tabBarIcon: ({ color, focused }) => (
-                        <Settings
+                        <SlidersHorizontal
                             size={22}
                             color={focused ? colors.primary : color}
                         />

@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { GlassPieChart } from '@/components/GlassPieChart';
 import { getMonthlySummary } from '@/db/database';
 import { useCategoryStore } from '@/store/category-store';
+import { usePreferencesStore } from '@/store/preferences-store';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +51,7 @@ export default function StatsScreen() {
   const monthlySummary = useTransactionStore((s) => s.monthlySummary);
   const categorySummaries = useTransactionStore((s) => s.categorySummaries);
   const categories = useCategoryStore((s) => s.categories);
+  const showCategories = usePreferencesStore((s) => s.showCategories);
 
   const totalExpense = monthlySummary?.totalExpense ?? 0;
 
@@ -251,14 +253,16 @@ export default function StatsScreen() {
             >
               Categorías Top
             </Text>
-            <Pressable onPress={() => router.push('/(tabs)/categories')}>
-              <Text
-                className="text-sm font-medium"
-                style={{ fontFamily: 'Inter', color: colors.primary }}
-              >
-                Ver todas
-              </Text>
-            </Pressable>
+            {showCategories && (
+              <Pressable onPress={() => router.push('/categories')}>
+                <Text
+                  className="text-sm font-medium"
+                  style={{ fontFamily: 'Inter', color: colors.primary }}
+                >
+                  Ver todas
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {topCategories.map((cat) => {

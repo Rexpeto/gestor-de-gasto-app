@@ -112,6 +112,22 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="categories"
+                options={{
+                  title: 'Categorías',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.onSurface,
+                }}
+              />
+              <Stack.Screen
+                name="presupuesto"
+                options={{
+                  title: 'Presupuesto',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.onSurface,
+                }}
+              />
+              <Stack.Screen
                 name="add-category"
                 options={{
                   presentation: 'modal',
