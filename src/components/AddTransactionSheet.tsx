@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useThemeColors } from '@/store/theme-store';
 import { useCategoryStore } from '@/store/category-store';
+import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 const PAYMENT_METHODS = [
   { id: 'bsc', label: '$ BCV' },
@@ -424,14 +424,14 @@ export const AddTransactionSheet = ({
           </View>
 
           {/* Custom numeric keyboard */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 0 }}>
             {keyboardRows.map((row, rowIdx) => (
               <View
                 key={rowIdx}
                 style={{
                   flexDirection: 'row',
                   gap: 8,
-                  marginBottom: 8,
+                  marginBottom: 0,
                 }}
               >
                 {row.map((key) => {
@@ -468,13 +468,11 @@ export const AddTransactionSheet = ({
               </View>
             ))}
           </View>
-        </BottomSheetScrollView>
 
-        {/* Fixed save button — above tab bar */}
-        <View
+          <View
           style={{
             paddingHorizontal: 20,
-            paddingTop: 8,
+            paddingTop: 30,
             paddingBottom: PADDING_2REM,
             backgroundColor: colors.background,
           }}
@@ -513,6 +511,8 @@ export const AddTransactionSheet = ({
             <Text style={{ fontSize: 18, color: colors.onPrimary }}>→</Text>
           </Pressable>
         </View>
+        </BottomSheetScrollView>
+        
       </View>
     </BottomSheet>
   );
