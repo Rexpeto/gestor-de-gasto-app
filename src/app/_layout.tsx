@@ -1,7 +1,7 @@
 import '../global.css';
 
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { Stack } from 'expo-router';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,7 +13,7 @@ import { HeroUINativeProvider } from 'heroui-native/provider';
 import { AddTransactionSheet } from '@/components/AddTransactionSheet';
 import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
-import { useThemeStore } from '@/store/theme-store';
+import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useSheetStore } from '@/store/sheet-store';
 
 SplashScreen.preventAutoHideAsync();
@@ -21,6 +21,13 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const themeMode = useThemeStore((s) => s.mode);
+
+  const colors = useThemeColors();
+  const systemScheme = useColorScheme();
+
+  const resolvedTheme = themeMode === 'system'
+    ? (systemScheme ?? 'dark')
+    : themeMode;
 
   const loadTransactions = useTransactionStore((s) => s.loadTransactions);
   const loadMonthlySummary = useTransactionStore((s) => s.loadMonthlySummary);
@@ -71,16 +78,12 @@ export default function RootLayout() {
   }, [appIsReady]);
 
   const statusBarStyle =
-    themeMode === 'dark'
-      ? 'light'
-      : themeMode === 'light'
-        ? 'dark'
-        : 'auto';
+    resolvedTheme === 'dark' ? 'light' : 'dark';
 
   if (!appIsReady) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: '#0e1513' }} />
+        <View style={{ flex: 1, backgroundColor: colors.background }} />
       </GestureHandlerRootView>
     );
   }
@@ -89,11 +92,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <HeroUINativeProvider>
-          <View className={`flex-1 bg-background ${themeMode === 'system' ? '' : themeMode}`}>
+          <View className={`flex-1 bg-background ${resolvedTheme}`}>
             <StatusBar style={statusBarStyle} />
             <Stack
               screenOptions={{
-                contentStyle: { backgroundColor: '#0e1513' },
+                contentStyle: { backgroundColor: colors.background },
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -110,8 +113,8 @@ export default function RootLayout() {
                 options={{
                   presentation: 'modal',
                   title: 'Nueva categoría',
-                  headerStyle: { backgroundColor: '#0e1513' },
-                  headerTintColor: '#dde4e1',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.onSurface,
                 }}
               />
             </Stack>

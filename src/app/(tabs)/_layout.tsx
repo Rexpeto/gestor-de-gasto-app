@@ -5,18 +5,21 @@ import {
   ChartBarBig,
   Settings,
 } from 'lucide-react-native/icons';
+import { useThemeColors } from '@/store/theme-store';
 
 export default function TabLayout() {
+  const colors = useThemeColors();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#57f1db',
-        tabBarInactiveTintColor: '#bacac5',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: 'rgba(9, 16, 14, 0.9)',
+          backgroundColor: colors.glassOverlay,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(60, 74, 70, 0.3)',
+          borderTopColor: colors.glassBorder,
           paddingTop: 4,
           height: 72,
           position: 'absolute',
@@ -40,7 +43,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <LayoutDashboard size={22} color={focused ? '#57f1db' : color} />
+            <LayoutDashboard size={22} color={focused ? colors.primary : color} />
           ),
         }}
       />
@@ -49,7 +52,7 @@ export default function TabLayout() {
         options={{
           title: 'History',
           tabBarIcon: ({ color, focused }) => (
-            <Receipt size={22} color={focused ? '#57f1db' : color} />
+            <Receipt size={22} color={focused ? colors.primary : color} />
           ),
         }}
       />
@@ -58,7 +61,7 @@ export default function TabLayout() {
         options={{
           title: 'Stats',
           tabBarIcon: ({ color, focused }) => (
-            <ChartBarBig size={22} color={focused ? '#57f1db' : color} />
+            <ChartBarBig size={22} color={focused ? colors.primary : color} />
           ),
         }}
       />
@@ -79,7 +82,7 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, focused }) => (
-            <Settings size={22} color={focused ? '#57f1db' : color} />
+            <Settings size={22} color={focused ? colors.primary : color} />
           ),
         }}
       />

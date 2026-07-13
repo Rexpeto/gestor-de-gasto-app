@@ -6,6 +6,7 @@ import { useCategoryStore } from '@/store/category-store';
 import { useSheetStore } from '@/store/sheet-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { Transaction } from '@/types';
+import { useThemeColors } from '@/store/theme-store';
 import {
   ArrowDownLeft,
   CreditCard,
@@ -46,6 +47,7 @@ export function TransactionRow({
   onPress: () => void;
   onLongPress?: () => void;
 }) {
+  const colors = useThemeColors();
   return (
     <Pressable
       className="flex-row items-center px-4 py-3.5"
@@ -62,13 +64,13 @@ export function TransactionRow({
       <View className="flex-1 ml-3">
         <Text
           className="text-sm font-medium"
-          style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurface }}
         >
           {tx.description || category?.name || 'Sin categoría'}
         </Text>
         <Text
           className="text-xs mt-0.5"
-          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
         >
           {category?.name || 'Sin categoría'} • {formatDate(tx.date)}
         </Text>
@@ -78,7 +80,7 @@ export function TransactionRow({
           className="text-sm font-semibold"
           style={{
             fontFamily: 'Inter',
-            color: tx.type === 'income' ? '#57f1db' : '#ffb4ab',
+            color: tx.type === 'income' ? colors.primary : colors.error,
           }}
         >
           {tx.type === 'income' ? '+ ' : '- '}
@@ -90,6 +92,7 @@ export function TransactionRow({
 }
 
 export default function DashboardScreen() {
+  const colors = useThemeColors();
   const openSheet = useSheetStore((s) => s.openSheet);
 
   const transactions = useTransactionStore((s) => s.transactions);
@@ -119,7 +122,7 @@ export default function DashboardScreen() {
   );
 
   return (
-    <View className="flex-1" style={{ backgroundColor: '#0e1513' }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 96 }}
@@ -131,9 +134,9 @@ export default function DashboardScreen() {
         <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
           <View
             style={{
-              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              backgroundColor: colors.glassSurface,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderColor: colors.glassBorder,
               borderRadius: 12,
               padding: 24,
               position: 'relative',
@@ -149,7 +152,7 @@ export default function DashboardScreen() {
                 width: 120,
                 height: 120,
                 borderRadius: 9999,
-                backgroundColor: 'rgba(87, 241, 219, 0.15)',
+                backgroundColor: `${colors.primary}26`,
               }}
             />
             <View
@@ -160,7 +163,7 @@ export default function DashboardScreen() {
                 width: 100,
                 height: 100,
                 borderRadius: 9999,
-                backgroundColor: 'rgba(87, 241, 219, 0.08)',
+                backgroundColor: `${colors.primary}14`,
               }}
             />
 
@@ -172,7 +175,7 @@ export default function DashboardScreen() {
                 fontWeight: '600',
                 textTransform: 'uppercase',
                 letterSpacing: 0.1,
-                color: '#bacac5',
+                color: colors.onSurfaceVariant,
                 marginBottom: 4,
               }}
             >
@@ -185,7 +188,7 @@ export default function DashboardScreen() {
                 fontFamily: 'Inter',
                 fontSize: 40,
                 fontWeight: '700',
-                color: '#dde4e1',
+                color: colors.onSurface,
                 letterSpacing: -0.02,
               }}
             >
@@ -204,20 +207,20 @@ export default function DashboardScreen() {
               {/* Left: income/expense pills */}
               <View style={{ flexDirection: 'row', gap: 20 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingUp size={14} color="#57f1db" />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: '#bacac5' }}>
+                  <TrendingUp size={14} color={colors.primary} />
+                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
                     Ingresos
                   </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#57f1db' }}>
+                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.primary }}>
                     {formatCurrency(totalIncome)}
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingDown size={14} color="#ffb4ab" />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: '#bacac5' }}>
+                  <TrendingDown size={14} color={colors.error} />
+                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
                     Gastos
                   </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#ffb4ab' }}>
+                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.error }}>
                     {formatCurrency(totalExpense)}
                   </Text>
                 </View>
@@ -230,14 +233,14 @@ export default function DashboardScreen() {
                     width: 36,
                     height: 36,
                     borderRadius: 9999,
-                    backgroundColor: '#1a211f',
+                    backgroundColor: colors.surfaceContainer,
                     borderWidth: 2,
-                    borderColor: '#0e1513',
+                    borderColor: colors.background,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: '700', color: '#dde4e1' }}>
+                  <Text style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: '700', color: colors.onSurface }}>
                     VISA
                   </Text>
                 </View>
@@ -246,15 +249,15 @@ export default function DashboardScreen() {
                     width: 36,
                     height: 36,
                     borderRadius: 9999,
-                    backgroundColor: '#57f1db',
+                    backgroundColor: colors.primary,
                     borderWidth: 2,
-                    borderColor: '#0e1513',
+                    borderColor: colors.background,
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginLeft: -12,
                   }}
                 >
-                  <Plus size={14} color="#003731" />
+                  <Plus size={14} color={colors.onPrimary} />
                 </View>
               </View>
             </View>
@@ -270,7 +273,7 @@ export default function DashboardScreen() {
               gap: 8,
               paddingVertical: 16,
               borderRadius: 12,
-              backgroundColor: 'rgba(87, 241, 219, 0.1)',
+              backgroundColor: `${colors.primary}1A`,
             }}
             onPress={() => openSheet('income')}
           >
@@ -279,14 +282,14 @@ export default function DashboardScreen() {
                 width: 48,
                 height: 48,
                 borderRadius: 9999,
-                backgroundColor: 'rgba(87, 241, 219, 0.15)',
+                backgroundColor: `${colors.primary}26`,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ArrowDownLeft size={20} color="#57f1db" />
+              <ArrowDownLeft size={20} color={colors.primary} />
             </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: '#dde4e1' }}>
+            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
               Ingresar
             </Text>
           </Pressable>
@@ -314,7 +317,7 @@ export default function DashboardScreen() {
             >
               <Repeat size={20} color="#8ab4f8" />
             </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: '#dde4e1' }}>
+            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
               Transferir
             </Text>
           </Pressable>
@@ -342,7 +345,7 @@ export default function DashboardScreen() {
             >
               <CreditCard size={20} color="#ce93d8" />
             </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: '#dde4e1' }}>
+            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
               Pagar
             </Text>
           </Pressable>
@@ -357,7 +360,7 @@ export default function DashboardScreen() {
                   fontFamily: 'Inter',
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                 }}
               >
                 Gastos por Categoría
@@ -368,7 +371,7 @@ export default function DashboardScreen() {
                     fontFamily: 'Inter',
                     fontSize: 13,
                     fontWeight: '500',
-                    color: '#57f1db',
+                    color: colors.primary,
                   }}
                 >
                   Ver todo
@@ -378,9 +381,9 @@ export default function DashboardScreen() {
 
             <View
               style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: colors.glassBorder,
                 borderRadius: 12,
                 padding: 16,
                 gap: 16,
@@ -411,7 +414,7 @@ export default function DashboardScreen() {
                             fontFamily: 'Inter',
                             fontSize: 14,
                             fontWeight: '500',
-                            color: '#dde4e1',
+                            color: colors.onSurface,
                           }}
                         >
                           {cat.categoryName}
@@ -421,7 +424,7 @@ export default function DashboardScreen() {
                             fontFamily: 'Inter',
                             fontSize: 14,
                             fontWeight: '600',
-                            color: '#dde4e1',
+                            color: colors.onSurface,
                           }}
                         >
                           {formatCurrency(cat.total)}
@@ -434,7 +437,7 @@ export default function DashboardScreen() {
                           height: 6,
                           borderRadius: 9999,
                           overflow: 'hidden',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          backgroundColor: colors.glassBorderStrong,
                         }}
                       >
                         <View
@@ -462,38 +465,38 @@ export default function DashboardScreen() {
                 fontFamily: 'Inter',
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#dde4e1',
+                color: colors.onSurface,
               }}
             >
               Transacciones Recientes
             </Text>
             <Pressable onPress={() => router.push('/(tabs)/transactions')}>
-              <ListFilter size={18} color="#bacac5" />
+              <ListFilter size={18} color={colors.onSurfaceVariant} />
             </Pressable>
           </View>
 
           {isLoading ? (
             <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Inter', color: '#bacac5' }}>Cargando...</Text>
+              <Text style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>Cargando...</Text>
             </View>
           ) : recentTransactions.length === 0 ? (
             <View
               style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: colors.glassBorder,
                 borderRadius: 12,
                 padding: 32,
                 alignItems: 'center',
               }}
             >
-              <Inbox size={48} color="#bacac5" />
+              <Inbox size={48} color={colors.onSurfaceVariant} />
               <Text
                 style={{
                   textAlign: 'center',
                   marginTop: 12,
                   fontFamily: 'Inter',
-                  color: '#bacac5',
+                  color: colors.onSurfaceVariant,
                 }}
               >
                 No hay movimientos este mes
@@ -505,11 +508,11 @@ export default function DashboardScreen() {
                   paddingVertical: 8,
                   borderRadius: 9999,
                   borderWidth: 1,
-                  borderColor: 'rgba(87, 241, 219, 0.4)',
+                  borderColor: `${colors.primary}66`,
                 }}
                 onPress={() => openSheet('expense')}
               >
-                <Text style={{ fontFamily: 'Inter', color: '#57f1db', fontSize: 14 }}>
+                <Text style={{ fontFamily: 'Inter', color: colors.primary, fontSize: 14 }}>
                   Agregar primero
                 </Text>
               </Pressable>
@@ -517,9 +520,9 @@ export default function DashboardScreen() {
           ) : (
             <View
               style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: colors.glassBorder,
                 borderRadius: 12,
                 overflow: 'hidden',
               }}
@@ -532,7 +535,7 @@ export default function DashboardScreen() {
                       <View
                         style={{
                           height: 1,
-                          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                          backgroundColor: colors.glassBorder,
                           marginLeft: 56,
                         }}
                       />

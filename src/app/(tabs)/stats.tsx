@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { GlassPieChart } from '@/components/GlassPieChart';
 import { getMonthlySummary } from '@/db/database';
 import { useCategoryStore } from '@/store/category-store';
+import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,10 +19,11 @@ const PERIODS: { key: Period; label: string }[] = [
 ];
 
 function TrendBadge({ trend }: { trend: 'up' | 'down' | 'same' }) {
+  const colors = useThemeColors();
   const config = {
-    up: { Icon: ArrowUpRight, color: '#ffb4ab' },
-    down: { Icon: ArrowDownRight, color: '#57f1db' },
-    same: { Icon: Minus, color: '#bacac5' },
+    up: { Icon: ArrowUpRight, color: colors.error },
+    down: { Icon: ArrowDownRight, color: colors.primary },
+    same: { Icon: Minus, color: colors.onSurfaceVariant },
   };
   const { Icon, color } = config[trend];
   return <Icon size={12} color={color} />;
@@ -33,13 +35,14 @@ function trendLabel(trend: 'up' | 'down' | 'same', pct: number): string {
   return 'Igual vs mes ant.';
 }
 
-function trendColor(trend: 'up' | 'down' | 'same'): string {
-  if (trend === 'up') return '#ffb4ab';
-  if (trend === 'down') return '#57f1db';
-  return '#bacac5';
+function trendColor(trend: 'up' | 'down' | 'same', colors: ReturnType<typeof useThemeColors>): string {
+  if (trend === 'up') return colors.error;
+  if (trend === 'down') return colors.primary;
+  return colors.onSurfaceVariant;
 }
 
 export default function StatsScreen() {
+  const colors = useThemeColors();
   const [period, setPeriod] = useState<Period>('monthly');
   const [lastMonthExpense, setLastMonthExpense] = useState<number | null>(null);
 
@@ -83,7 +86,7 @@ export default function StatsScreen() {
   const topCategories = expenseCategories.slice(0, 5);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#0e1513' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
       <ScrollView className="flex-1" contentContainerClassName="pb-28">
         {/* ── Period Selector Pills ── */}
         <View className="px-5 py-4">
@@ -97,15 +100,15 @@ export default function StatsScreen() {
                   style={
                     active
                       ? {
-                          backgroundColor: '#57f1db',
-                          shadowColor: '#57f1db',
+                          backgroundColor: colors.primary,
+                          shadowColor: colors.primary,
                           shadowOffset: { width: 0, height: 4 },
                           shadowOpacity: 0.1,
                           shadowRadius: 12,
                           elevation: 8,
                         }
                       : {
-                          backgroundColor: '#1a211f',
+                          backgroundColor: colors.surfaceContainer,
                           borderWidth: 1,
                           borderColor: 'rgba(186, 202, 197, 0.1)',
                         }
@@ -117,7 +120,7 @@ export default function StatsScreen() {
                       fontFamily: 'Inter',
                       fontSize: 13,
                       fontWeight: '600',
-                      color: active ? '#0e1513' : '#bacac5',
+                      color: active ? colors.background : colors.onSurfaceVariant,
                     }}
                   >
                     {p.label}
@@ -132,14 +135,14 @@ export default function StatsScreen() {
         <View
           className="mx-5 rounded-xl p-lg mb-4"
           style={{
-            backgroundColor: 'rgba(26, 33, 31, 0.6)',
+            backgroundColor: colors.glassSurface,
             borderWidth: 1,
             borderColor: 'rgba(186, 202, 197, 0.1)',
           }}
         >
           <Text
             className="text-xs font-semibold tracking-widest mb-4"
-            style={{ fontFamily: 'Inter', color: '#bacac5', textTransform: 'uppercase' }}
+            style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, textTransform: 'uppercase' }}
           >
             Gastos del mes
           </Text>
@@ -161,12 +164,12 @@ export default function StatsScreen() {
                   />
                   <Text
                     numberOfLines={1}
-                    style={{ fontFamily: 'Inter', fontSize: 11, color: '#bacac5', flex: 1 }}
+                    style={{ fontFamily: 'Inter', fontSize: 11, color: colors.onSurfaceVariant, flex: 1 }}
                   >
                     {cat.categoryName}
                   </Text>
                   <Text
-                    style={{ fontFamily: 'Geist', fontSize: 11, color: '#dde4e1', fontWeight: '600' }}
+                    style={{ fontFamily: 'Geist', fontSize: 11, color: colors.onSurface, fontWeight: '600' }}
                   >
                     {cat.percentage.toFixed(0)}%
                   </Text>
@@ -182,20 +185,20 @@ export default function StatsScreen() {
           <View
             className="flex-1 rounded-xl p-md"
             style={{
-              backgroundColor: '#1a211f',
+              backgroundColor: colors.surfaceContainer,
               borderWidth: 1,
               borderColor: 'rgba(186, 202, 197, 0.06)',
             }}
           >
             <Text
               className="text-xs font-medium mb-1"
-              style={{ fontFamily: 'Inter', color: '#bacac5', textTransform: 'uppercase', letterSpacing: 1 }}
+              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 1 }}
             >
               Este mes
             </Text>
             <Text
               className="text-lg font-bold"
-              style={{ fontFamily: 'Geist', color: '#dde4e1' }}
+              style={{ fontFamily: 'Geist', color: colors.onSurface }}
             >
               ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 0 })}
             </Text>
@@ -204,7 +207,7 @@ export default function StatsScreen() {
                 <TrendBadge trend={percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'same'} />
                 <Text
                   className="text-xs font-medium ml-1"
-                  style={{ fontFamily: 'Inter', color: trendColor(percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'same') }}
+                  style={{ fontFamily: 'Inter', color: trendColor(percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'same', colors) }}
                 >
                   {percentChange > 0 ? '+' : ''}{percentChange}%
                 </Text>
@@ -216,20 +219,20 @@ export default function StatsScreen() {
           <View
             className="flex-1 rounded-xl p-md"
             style={{
-              backgroundColor: '#1a211f',
+              backgroundColor: colors.surfaceContainer,
               borderWidth: 1,
               borderColor: 'rgba(186, 202, 197, 0.06)',
             }}
           >
             <Text
               className="text-xs font-medium mb-1"
-              style={{ fontFamily: 'Inter', color: '#bacac5', textTransform: 'uppercase', letterSpacing: 1 }}
+              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 1 }}
             >
               Mes pasado
             </Text>
             <Text
               className="text-lg font-bold"
-              style={{ fontFamily: 'Geist', color: '#859490' }}
+              style={{ fontFamily: 'Geist', color: colors.outline }}
             >
               {lastMonthExpense !== null
                 ? `$${lastMonthExpense.toLocaleString('es-ES', { minimumFractionDigits: 0 })}`
@@ -243,14 +246,14 @@ export default function StatsScreen() {
           <View className="flex-row items-center justify-between mb-3">
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurface }}
             >
               Categorías Top
             </Text>
             <Pressable onPress={() => router.push('/(tabs)/categories')}>
               <Text
                 className="text-sm font-medium"
-                style={{ fontFamily: 'Inter', color: '#57f1db' }}
+                style={{ fontFamily: 'Inter', color: colors.primary }}
               >
                 Ver todas
               </Text>
@@ -265,7 +268,7 @@ export default function StatsScreen() {
                 key={cat.categoryId}
                 className="rounded-xl p-md mb-2"
                 style={{
-                  backgroundColor: '#161d1b',
+                  backgroundColor: colors.surface,
                 }}
               >
                 <View className="flex-row items-center gap-3">
@@ -283,20 +286,20 @@ export default function StatsScreen() {
                     <View className="flex-row justify-between items-center">
                       <Text
                         className="text-sm font-medium"
-                        style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+                        style={{ fontFamily: 'Inter', color: colors.onSurface }}
                       >
                         {cat.categoryName}
                       </Text>
                       <Text
                         className="text-sm font-semibold"
-                        style={{ fontFamily: 'Geist', color: '#dde4e1' }}
+                        style={{ fontFamily: 'Geist', color: colors.onSurface }}
                       >
                         ${cat.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                       </Text>
                     </View>
 
                     {/* Progress bar */}
-                    <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#2f3634' }}>
+                    <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceContainerHighest }}>
                       <View
                         className="h-full rounded-full"
                         style={{
@@ -310,7 +313,7 @@ export default function StatsScreen() {
                     <View className="flex-row items-center justify-between">
                       <Text
                         className="text-xs"
-                        style={{ fontFamily: 'Inter', color: '#bacac5' }}
+                        style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
                       >
                         {pct.toFixed(1)}% del presupuesto
                       </Text>
@@ -318,7 +321,7 @@ export default function StatsScreen() {
                         <TrendBadge trend={trend} />
                         <Text
                           className="text-xs ml-1"
-                          style={{ fontFamily: 'Inter', color: trendColor(trend) }}
+                          style={{ fontFamily: 'Inter', color: trendColor(trend, colors) }}
                         >
                           {trendLabel(trend, pct)}
                         </Text>

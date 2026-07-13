@@ -1,4 +1,5 @@
 import { useCategoryStore } from '@/store/category-store';
+import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -60,6 +61,7 @@ export default function AddTransactionScreen() {
   const [date, setDate] = useState(todayISO);
   const [paymentMethod, setPaymentMethod] = useState('bsc');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const colors = useThemeColors();
 
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -176,7 +178,7 @@ export default function AddTransactionScreen() {
           left: 0,
           right: 0,
           maxHeight: SHEET_MAX_HEIGHT,
-          backgroundColor: '#0e1513',
+          backgroundColor: colors.background,
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           transform: [{ translateY: slideAnim }],
@@ -196,7 +198,7 @@ export default function AddTransactionScreen() {
                   width: 32,
                   height: 4,
                   borderRadius: 9999,
-                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  backgroundColor: colors.glassBorderStrong,
                 }}
               />
             </View>
@@ -216,14 +218,14 @@ export default function AddTransactionScreen() {
                 style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
                 hitSlop={12}
               >
-                <Text style={{ fontFamily: 'Inter', fontSize: 20, color: '#bacac5' }}>✕</Text>
+                <Text style={{ fontFamily: 'Inter', fontSize: 20, color: colors.onSurfaceVariant }}>✕</Text>
               </Pressable>
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text
                   style={{
                     fontFamily: 'Inter-SemiBold',
                     fontSize: 17,
-                    color: '#dde4e1',
+                    color: colors.onSurface,
                   }}
                 >
                   {title}
@@ -239,7 +241,7 @@ export default function AddTransactionScreen() {
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: '600',
-                  color: '#bacac5',
+                  color: colors.onSurfaceVariant,
                   textTransform: 'uppercase',
                   letterSpacing: 1.2,
                   marginBottom: 8,
@@ -253,7 +255,7 @@ export default function AddTransactionScreen() {
                     fontFamily: 'Inter',
                     fontSize: 28,
                     fontWeight: '600',
-                    color: '#57f1db',
+                    color: colors.primary,
                     marginBottom: 4,
                   }}
                 >
@@ -264,7 +266,7 @@ export default function AddTransactionScreen() {
                     fontFamily: 'Inter-Bold',
                     fontSize: 64,
                     fontWeight: 'bold',
-                    color: '#dde4e1',
+                    color: colors.onSurface,
                     lineHeight: 72,
                   }}
                 >
@@ -280,7 +282,7 @@ export default function AddTransactionScreen() {
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: '600',
-                  color: '#bacac5',
+                  color: colors.onSurfaceVariant,
                   textTransform: 'uppercase',
                   letterSpacing: 1.2,
                   marginBottom: 10,
@@ -308,12 +310,12 @@ export default function AddTransactionScreen() {
                         borderWidth: 1,
                         gap: 6,
                         backgroundColor: active
-                          ? 'rgba(87,241,219,0.2)'
-                          : '#242b2a',
+                          ? colors.primary + '33'
+                          : colors.surfaceContainerHigh,
                         borderColor: active
-                          ? 'rgba(87,241,219,0.3)'
-                          : 'rgba(255,255,255,0.05)',
-                        shadowColor: active ? '#57f1db' : 'transparent',
+                          ? colors.primary + '4D'
+                          : colors.glassBorder,
+                        shadowColor: active ? colors.primary : 'transparent',
                         shadowOpacity: active ? 0.25 : 0,
                         shadowRadius: active ? 8 : 0,
                         shadowOffset: { width: 0, height: 0 },
@@ -325,7 +327,7 @@ export default function AddTransactionScreen() {
                           fontFamily: 'Inter',
                           fontSize: 13,
                           fontWeight: '500',
-                          color: active ? '#57f1db' : '#bacac5',
+                          color: active ? colors.primary : colors.onSurfaceVariant,
                         }}
                       >
                         {cat.name}
@@ -343,7 +345,7 @@ export default function AddTransactionScreen() {
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: '600',
-                  color: '#bacac5',
+                  color: colors.onSurfaceVariant,
                   textTransform: 'uppercase',
                   letterSpacing: 1.2,
                   marginBottom: 10,
@@ -370,12 +372,12 @@ export default function AddTransactionScreen() {
                         borderRadius: 9999,
                         borderWidth: 1,
                         backgroundColor: active
-                          ? 'rgba(87,241,219,0.2)'
-                          : '#242b2a',
+                          ? colors.primary + '33'
+                          : colors.surfaceContainerHigh,
                         borderColor: active
-                          ? 'rgba(87,241,219,0.3)'
-                          : 'rgba(255,255,255,0.05)',
-                        shadowColor: active ? '#57f1db' : 'transparent',
+                          ? colors.primary + '4D'
+                          : colors.glassBorder,
+                        shadowColor: active ? colors.primary : 'transparent',
                         shadowOpacity: active ? 0.25 : 0,
                         shadowRadius: active ? 8 : 0,
                         shadowOffset: { width: 0, height: 0 },
@@ -386,7 +388,7 @@ export default function AddTransactionScreen() {
                           fontFamily: 'Inter',
                           fontSize: 13,
                           fontWeight: '500',
-                          color: active ? '#57f1db' : '#bacac5',
+                          color: active ? colors.primary : colors.onSurfaceVariant,
                         }}
                       >
                         {pm.label}
@@ -412,21 +414,21 @@ export default function AddTransactionScreen() {
                   flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: '#242b2a',
+                  backgroundColor: colors.surfaceContainerHigh,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.05)',
+                  borderColor: colors.glassBorder,
                   borderRadius: 16,
                   paddingHorizontal: 12,
                   paddingVertical: 14,
                   gap: 8,
                 }}
               >
-                <Text style={{ fontSize: 16, color: '#bacac5' }}>📅</Text>
+                <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>📅</Text>
                 <Text
                   style={{
                     fontFamily: 'Inter',
                     fontSize: 13,
-                    color: '#dde4e1',
+                    color: colors.onSurface,
                     flexShrink: 1,
                   }}
                   numberOfLines={1}
@@ -441,26 +443,26 @@ export default function AddTransactionScreen() {
                   flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: '#242b2a',
+                  backgroundColor: colors.surfaceContainerHigh,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.05)',
+                  borderColor: colors.glassBorder,
                   borderRadius: 16,
                   paddingHorizontal: 12,
                   paddingVertical: 4,
                   gap: 8,
                 }}
               >
-                <Text style={{ fontSize: 16, color: '#bacac5' }}>✏️</Text>
+                <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>✏️</Text>
                 <TextInput
                   placeholder="¿En qué gastaste?"
-                  placeholderTextColor="#859490"
+                  placeholderTextColor={colors.outline}
                   value={description}
                   onChangeText={setDescription}
                   style={{
                     flex: 1,
                     fontFamily: 'Inter',
                     fontSize: 13,
-                    color: '#dde4e1',
+                    color: colors.onSurface,
                     paddingVertical: 10,
                   }}
                 />
@@ -491,8 +493,8 @@ export default function AddTransactionScreen() {
                           justifyContent: 'center',
                           alignItems: 'center',
                           backgroundColor: isBackspace
-                            ? 'rgba(255,180,171,0.1)'
-                            : 'rgba(255,255,255,0.05)',
+                            ? colors.error + '1A'
+                            : colors.glassBorder,
                         }}
                         android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
                       >
@@ -501,7 +503,7 @@ export default function AddTransactionScreen() {
                             fontFamily: 'Inter',
                             fontSize: isBackspace ? 18 : 22,
                             fontWeight: '600',
-                            color: isBackspace ? '#ffb4ab' : '#dde4e1',
+                            color: isBackspace ? colors.error : colors.onSurface,
                           }}
                         >
                           {isBackspace ? '⌫' : key}
@@ -523,13 +525,13 @@ export default function AddTransactionScreen() {
                   height: 56,
                   borderRadius: 24,
                   backgroundColor: isSubmitting
-                    ? 'rgba(87,241,219,0.5)'
-                    : '#57f1db',
+                    ? colors.primary + '80'
+                    : colors.primary,
                   flexDirection: 'row',
                   justifyContent: 'center',
                   alignItems: 'center',
                   gap: 8,
-                  shadowColor: '#57f1db',
+                  shadowColor: colors.primary,
                   shadowOpacity: 0.3,
                   shadowRadius: 25,
                   shadowOffset: { width: 0, height: 20 },
@@ -541,12 +543,12 @@ export default function AddTransactionScreen() {
                     fontFamily: 'Inter-SemiBold',
                     fontSize: 16,
                     fontWeight: '600',
-                    color: '#00201c',
+                    color: colors.onPrimary,
                   }}
                 >
                   {saveLabel}
                 </Text>
-                <Text style={{ fontSize: 18, color: '#00201c' }}>→</Text>
+                <Text style={{ fontSize: 18, color: colors.onPrimary }}>→</Text>
               </Pressable>
             </View>
           </ScrollView>

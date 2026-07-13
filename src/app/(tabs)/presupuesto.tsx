@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowLeft, PiggyBank, Settings2 } from 'lucide-react-nati
 import { useBudgetStore } from '@/store/budget-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useTransactionStore } from '@/store/transaction-store';
+import { useThemeColors } from '@/store/theme-store';
 
 function EditableNumberInput({
   value,
@@ -16,18 +17,19 @@ function EditableNumberInput({
   onChange: (v: string) => void;
   onBlur: () => void;
 }) {
+  const colors = useThemeColors();
   return (
     <View
       className="rounded-lg px-3 py-2 min-w-[90px]"
       style={{
-        backgroundColor: 'rgba(87, 241, 219, 0.08)',
+        backgroundColor: `${colors.primary}14`,
         borderWidth: 1,
-        borderColor: 'rgba(87, 241, 219, 0.2)',
+        borderColor: `${colors.primary}33`,
       }}
     >
       <Text
         className="text-xs font-semibold mb-0.5"
-        style={{ fontFamily: 'Inter', color: '#57f1db' }}
+        style={{ fontFamily: 'Inter', color: colors.primary }}
       >
         $
       </Text>
@@ -37,14 +39,15 @@ function EditableNumberInput({
         onBlur={onBlur}
         keyboardType="decimal-pad"
         className="text-sm font-bold"
-        style={{ fontFamily: 'Inter', color: '#dde4e1', padding: 0 }}
-        placeholderTextColor="#859490"
+        style={{ fontFamily: 'Inter', color: colors.onSurface, padding: 0 }}
+        placeholderTextColor={colors.outline}
       />
     </View>
   );
 }
 
 export default function PresupuestoScreen() {
+  const colors = useThemeColors();
   const categories = useCategoryStore((s) => s.categories);
   const categorySummaries = useTransactionStore((s) => s.categorySummaries);
   const {
@@ -79,19 +82,19 @@ export default function PresupuestoScreen() {
   const [editingBudget, setEditingBudget] = useState<Record<number, string>>({});
 
   return (
-    <View className="flex-1" style={{ backgroundColor: '#0e1513' }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* ── Header ── */}
       <View className="px-5 pt-16 pb-4 flex-row items-center gap-3">
         <Pressable onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#bacac5" />
+          <ArrowLeft size={24} color={colors.onSurfaceVariant} />
         </Pressable>
         <Text
           className="text-xl font-bold flex-1"
-          style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurface }}
         >
           Presupuesto
         </Text>
-        <Settings2 size={20} color="#bacac5" />
+        <Settings2 size={20} color={colors.onSurfaceVariant} />
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="pb-32">
@@ -99,16 +102,16 @@ export default function PresupuestoScreen() {
         <View
           className="mx-5 rounded-2xl p-5 mb-4"
           style={{
-            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            backgroundColor: colors.glassSurface,
             borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.08)',
+            borderColor: colors.glassBorder,
           }}
         >
           <View className="flex-row items-center gap-2 mb-3">
-            <PiggyBank size={20} color="#57f1db" />
+            <PiggyBank size={20} color={colors.primary} />
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurface }}
             >
               Presupuesto mensual
             </Text>
@@ -117,11 +120,11 @@ export default function PresupuestoScreen() {
           <View className="flex-row items-baseline gap-1 mb-2">
             <Text
               className="text-3xl font-bold"
-              style={{ fontFamily: 'Inter', color: '#57f1db' }}
+              style={{ fontFamily: 'Inter', color: colors.primary }}
             >
               ${totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
             </Text>
-            <Text className="text-xs" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+            <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
               / mes
             </Text>
           </View>
@@ -129,25 +132,25 @@ export default function PresupuestoScreen() {
           {/* Spending progress */}
           {totalBudgeted > 0 && (
             <>
-              <View className="h-2 rounded-full overflow-hidden mt-3" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+              <View className="h-2 rounded-full overflow-hidden mt-3" style={{ backgroundColor: colors.glassBorder }}>
                 <View
                   className="h-full rounded-full"
                   style={{
                     width: `${Math.min(overspentPct, 100)}%`,
-                    backgroundColor: isOverBudget ? '#ef4444' : '#57f1db',
+                    backgroundColor: isOverBudget ? colors.danger : colors.primary,
                   }}
                 />
               </View>
               <View className="flex-row justify-between mt-2">
                 <Text
                   className="text-xs font-medium"
-                  style={{ fontFamily: 'Inter', color: isOverBudget ? '#ef4444' : '#bacac5' }}
+                  style={{ fontFamily: 'Inter', color: isOverBudget ? colors.danger : colors.onSurfaceVariant }}
                 >
                   Gastado: ${totalSpent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                 </Text>
                 <Text
                   className="text-xs font-medium"
-                  style={{ fontFamily: 'Inter', color: isOverBudget ? '#ef4444' : '#bacac5' }}
+                  style={{ fontFamily: 'Inter', color: isOverBudget ? colors.danger : colors.onSurfaceVariant }}
                 >
                   {overspentPct}%
                 </Text>
@@ -155,9 +158,9 @@ export default function PresupuestoScreen() {
               {isOverBudget && (
                 <View
                   className="mt-3 rounded-xl p-3"
-                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                  style={{ backgroundColor: `${colors.danger}1F`, borderWidth: 1, borderColor: `${colors.danger}33` }}
                 >
-                  <Text className="text-xs font-medium" style={{ fontFamily: 'Inter', color: '#ef4444' }}>
+                  <Text className="text-xs font-medium" style={{ fontFamily: 'Inter', color: colors.danger }}>
                     ⚠ Has superado tu presupuesto mensual
                   </Text>
                 </View>
@@ -170,7 +173,7 @@ export default function PresupuestoScreen() {
         <View className="mx-5 mb-4">
           <Text
             className="text-base font-semibold mb-3"
-            style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+            style={{ fontFamily: 'Inter', color: colors.onSurface }}
           >
             Límites por categoría
           </Text>
@@ -179,12 +182,12 @@ export default function PresupuestoScreen() {
             <View
               className="rounded-2xl p-6 items-center"
               style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: colors.glassBorder,
               }}
             >
-              <Text style={{ fontFamily: 'Inter', color: '#bacac5', textAlign: 'center' }}>
+              <Text style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, textAlign: 'center' }}>
                 No hay categorías de gasto. Creá algunas desde Categorías.
               </Text>
             </View>
@@ -207,12 +210,12 @@ export default function PresupuestoScreen() {
                   className="rounded-2xl p-4 mb-2"
                   style={{
                     backgroundColor: !budget?.enabled && budget
-                      ? 'rgba(30, 41, 59, 0.3)'
-                      : 'rgba(30, 41, 59, 0.6)',
+                      ? `${colors.glassSurface}4D`
+                      : colors.glassSurface,
                     borderWidth: 1,
                     borderColor: budget?.enabled
-                      ? over ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.08)'
-                      : 'rgba(255, 255, 255, 0.04)',
+                      ? over ? `${colors.danger}33` : colors.glassBorder
+                      : colors.glassBorder,
                     opacity: budget && !budget.enabled ? 0.5 : 1,
                   }}
                 >
@@ -228,25 +231,25 @@ export default function PresupuestoScreen() {
                       <View className="flex-row justify-between items-center mb-1">
                         <Text
                           className="text-sm font-medium"
-                          style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+                          style={{ fontFamily: 'Inter', color: colors.onSurface }}
                         >
                           {cat.name}
                         </Text>
                         <Text
                           className="text-xs font-semibold"
-                          style={{ fontFamily: 'Inter', color: over ? '#ef4444' : '#bacac5' }}
+                          style={{ fontFamily: 'Inter', color: over ? colors.danger : colors.onSurfaceVariant }}
                         >
                           {pct}% usado
                         </Text>
                       </View>
 
                       {budget?.enabled && (
-                        <View className="h-1.5 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                        <View className="h-1.5 rounded-full overflow-hidden mb-1" style={{ backgroundColor: colors.glassBorder }}>
                           <View
                             className="h-full rounded-full"
                             style={{
                               width: `${pct}%`,
-                              backgroundColor: over ? '#ef4444' : cat.color,
+                              backgroundColor: over ? colors.danger : cat.color,
                             }}
                           />
                         </View>
@@ -271,10 +274,10 @@ export default function PresupuestoScreen() {
                         {budget && (
                           <Pressable
                             className="p-2 rounded-lg"
-                            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                            style={{ backgroundColor: `${colors.danger}1A` }}
                             onPress={() => removeBudget(cat.id)}
                           >
-                            <Trash2 size={16} color="#ef4444" />
+                            <Trash2 size={16} color={colors.danger} />
                           </Pressable>
                         )}
                         {budget && (
@@ -282,19 +285,19 @@ export default function PresupuestoScreen() {
                             className="p-2 rounded-lg"
                             style={{
                               backgroundColor: budget.enabled
-                                ? 'rgba(239, 68, 68, 0.1)'
-                                : 'rgba(87, 241, 219, 0.1)',
+                                ? `${colors.danger}1A`
+                                : `${colors.primary}1A`,
                             }}
                             onPress={() => toggleBudget(cat.id)}
                           >
-                            <Text style={{ fontSize: 14, color: budget.enabled ? '#ef4444' : '#57f1db' }}>
+                            <Text style={{ fontSize: 14, color: budget.enabled ? colors.danger : colors.primary }}>
                               {budget.enabled ? '⏸' : '▶'}
                             </Text>
                           </Pressable>
                         )}
                       </View>
                       {budget && (
-                        <Text className="text-xs mt-1" style={{ fontFamily: 'Inter', color: '#859490' }}>
+                        <Text className="text-xs mt-1" style={{ fontFamily: 'Inter', color: colors.outline }}>
                           Gastado: ${spent.toLocaleString('es-ES', { minimumFractionDigits: 2 })} / ${budget.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </Text>
                       )}
@@ -311,13 +314,13 @@ export default function PresupuestoScreen() {
           <View className="flex-row items-center justify-between mb-3">
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurface }}
             >
               Tasas de cambio
             </Text>
             <Text
               className="text-xs font-medium"
-              style={{ fontFamily: 'Inter', color: '#bacac5' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
             >
               Base: {baseCurrency}
             </Text>
@@ -326,9 +329,9 @@ export default function PresupuestoScreen() {
           <View
             className="rounded-2xl p-4 overflow-hidden"
             style={{
-              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              backgroundColor: colors.glassSurface,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderColor: colors.glassBorder,
             }}
           >
             {exchangeRates
@@ -339,31 +342,31 @@ export default function PresupuestoScreen() {
                   className="flex-row items-center py-3"
                   style={{
                     borderTopWidth: i > 0 ? 1 : 0,
-                    borderTopColor: 'rgba(255,255,255,0.06)',
+                    borderTopColor: colors.glassBorder,
                   }}
                 >
                   <View
                     className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-                    style={{ backgroundColor: 'rgba(87, 241, 219, 0.1)' }}
+                    style={{ backgroundColor: `${colors.primary}1A` }}
                   >
-                    <Text className="text-base font-bold" style={{ fontFamily: 'Inter', color: '#57f1db' }}>
+                    <Text className="text-base font-bold" style={{ fontFamily: 'Inter', color: colors.primary }}>
                       {rate.symbol}
                     </Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: '#dde4e1' }}>
+                    <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: colors.onSurface }}>
                       {rate.code}
                     </Text>
-                    <Text className="text-xs" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+                    <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
                       1 {rate.code} = {rate.rateToBase} {baseCurrency}
                     </Text>
                   </View>
                   <View
                     className="rounded-lg px-3 py-1.5 min-w-[80px]"
-                    style={{ backgroundColor: 'rgba(87, 241, 219, 0.08)', borderWidth: 1, borderColor: 'rgba(87, 241, 219, 0.2)' }}
+                    style={{ backgroundColor: `${colors.primary}14`, borderWidth: 1, borderColor: `${colors.primary}33` }}
                   >
                     {/* Simple rate display */}
-                    <Text className="text-xs font-semibold text-right" style={{ fontFamily: 'Inter', color: '#57f1db' }}>
+                    <Text className="text-xs font-semibold text-right" style={{ fontFamily: 'Inter', color: colors.primary }}>
                       {rate.rateToBase}
                     </Text>
                   </View>
@@ -372,7 +375,7 @@ export default function PresupuestoScreen() {
 
             {exchangeRates.filter((r) => r.enabled).length === 0 && (
               <View className="py-4 items-center">
-                <Text style={{ fontFamily: 'Inter', color: '#bacac5', fontSize: 13 }}>
+                <Text style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, fontSize: 13 }}>
                   No hay monedas habilitadas
                 </Text>
               </View>
@@ -382,7 +385,7 @@ export default function PresupuestoScreen() {
           {/* Available but disabled currencies */}
           {exchangeRates.some((r) => !r.enabled) && (
             <View className="mt-3">
-              <Text className="text-xs font-semibold mb-2" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+              <Text className="text-xs font-semibold mb-2" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
                 Monedas disponibles
               </Text>
               <View className="flex-row flex-wrap gap-2">
@@ -391,14 +394,14 @@ export default function PresupuestoScreen() {
                     key={rate.code}
                     className="flex-row items-center gap-1.5 px-3 py-2 rounded-lg"
                     style={{
-                      backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                      backgroundColor: colors.glassSurface,
                       borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.08)',
+                      borderColor: colors.glassBorder,
                     }}
                     onPress={() => toggleCurrency(rate.code)}
                   >
-                    <Plus size={14} color="#57f1db" />
-                    <Text className="text-xs font-medium" style={{ fontFamily: 'Inter', color: '#57f1db' }}>
+                    <Plus size={14} color={colors.primary} />
+                    <Text className="text-xs font-medium" style={{ fontFamily: 'Inter', color: colors.primary }}>
                       {rate.code}
                     </Text>
                   </Pressable>
@@ -412,12 +415,12 @@ export default function PresupuestoScreen() {
         <View className="mx-5 mt-2">
           <Pressable
             className="w-full py-3.5 rounded-full items-center flex-row justify-center gap-2"
-            style={{ backgroundColor: 'rgba(87, 241, 219, 0.12)', borderWidth: 1, borderColor: 'rgba(87, 241, 219, 0.2)' }}
+            style={{ backgroundColor: `${colors.primary}1F`, borderWidth: 1, borderColor: `${colors.primary}33` }}
             onPress={() => router.push('/(tabs)/stats')}
           >
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#57f1db' }}
+              style={{ fontFamily: 'Inter', color: colors.primary }}
             >
               Ver estadísticas de gastos
             </Text>

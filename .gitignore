@@ -43,3 +43,5 @@ example
 /android
 
 .secrets
+.vscode
+opencode.json

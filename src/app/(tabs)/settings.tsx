@@ -15,7 +15,7 @@ import {
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { resetDatabase } from '@/db/database';
-import { useThemeStore, type ThemeMode } from '@/store/theme-store';
+import { useThemeColors, useThemeStore, type ThemeMode } from '@/store/theme-store';
 import { useBudgetStore } from '@/store/budget-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
@@ -38,13 +38,14 @@ function GlassPanel({
   heavy?: boolean;
   className?: string;
 }) {
+  const colors = useThemeColors();
   return (
     <View
       className={`p-4 ${className}`}
       style={{
-        backgroundColor: heavy ? 'rgba(30,41,59,0.8)' : 'rgba(30,41,59,0.6)',
+        backgroundColor: heavy ? colors.glassOverlay : colors.glassSurface,
         borderWidth: 1,
-        borderColor: accent ? 'rgba(87,241,219,0.3)' : 'rgba(255,255,255,0.1)',
+        borderColor: accent ? `${colors.primary}4D` : colors.glassBorderStrong,
         borderRadius: 12,
         ...(heavy
           ? {
@@ -63,12 +64,13 @@ function GlassPanel({
 }
 
 function SectionHeader({ icon: Icon, label }: { icon: React.ComponentType<{ size?: number; color?: string }>; label: string }) {
+  const colors = useThemeColors();
   return (
     <View className="flex-row items-center gap-3 mb-3">
-      <Icon size={20} color="#57f1db" />
+      <Icon size={20} color={colors.primary} />
       <Text
         className="text-xs font-semibold uppercase tracking-widest"
-        style={{ fontFamily: 'Inter', color: '#bacac5' }}
+        style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
       >
         {label}
       </Text>
@@ -77,6 +79,7 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ComponentType<{ size
 }
 
 export default function SettingsScreen() {
+  const colors = useThemeColors();
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
   const totalBudget = useBudgetStore((s) => s.totalBudget);
@@ -107,27 +110,27 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       className="flex-1"
-      style={{ backgroundColor: '#0e1513' }}
+      style={{ backgroundColor: colors.background }}
       contentContainerClassName="pb-28"
     >
       {/* ── Sticky-style Header ── */}
       <View
         className="flex-row items-center justify-between px-5 pt-14 pb-4"
-        style={{ backgroundColor: 'rgba(14,21,19,0.95)' }}
+        style={{ backgroundColor: `${colors.background}F2` }}
       >
         <Text
           className="text-xl font-bold"
-          style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurface }}
         >
           Financier
         </Text>
         <View className="flex-row items-center gap-4">
-          <Bell size={22} color="#bacac5" />
+          <Bell size={22} color={colors.onSurfaceVariant} />
           <View
             className="w-9 h-9 rounded-full items-center justify-center"
-            style={{ backgroundColor: 'rgba(87,241,219,0.15)' }}
+            style={{ backgroundColor: `${colors.primary}26` }}
           >
-            <User size={18} color="#57f1db" />
+            <User size={18} color={colors.primary} />
           </View>
         </View>
       </View>
@@ -138,13 +141,13 @@ export default function SettingsScreen() {
         <View className="mt-2">
           <Text
             className="text-2xl font-bold"
-            style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+            style={{ fontFamily: 'Inter', color: colors.onSurface }}
           >
             Configuración
           </Text>
           <Text
             className="text-sm mt-1"
-            style={{ fontFamily: 'Inter', color: '#bacac5' }}
+            style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
           >
             Define tu presupuesto y tasas de mercado.
           </Text>
@@ -159,27 +162,27 @@ export default function SettingsScreen() {
               <Pressable
                 className="flex-row items-center justify-between px-4 py-3 rounded-xl"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  backgroundColor: colors.glassBorder,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.08)',
+                  borderColor: colors.glassBorder,
                 }}
                 onPress={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}
               >
                 <Text
                   className="text-sm"
-                  style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+                  style={{ fontFamily: 'Inter', color: colors.onSurface }}
                 >
                   {MONTHS[selectedMonth]}
                 </Text>
-                <ChevronDown size={16} color="#859490" />
+                <ChevronDown size={16} color={colors.outline} />
               </Pressable>
               {showMonthPicker && (
                 <View
                   className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl overflow-hidden"
                   style={{
-                    backgroundColor: 'rgba(26,33,31,0.98)',
+                    backgroundColor: colors.surfaceContainer,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderColor: colors.glassBorderStrong,
                   }}
                 >
                   <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
@@ -188,7 +191,7 @@ export default function SettingsScreen() {
                         key={i}
                         className="px-4 py-3"
                         style={{
-                          backgroundColor: i === selectedMonth ? 'rgba(87,241,219,0.12)' : 'transparent',
+                          backgroundColor: i === selectedMonth ? `${colors.primary}1F` : 'transparent',
                         }}
                         onPress={() => { setSelectedMonth(i); setShowMonthPicker(false); }}
                       >
@@ -196,7 +199,7 @@ export default function SettingsScreen() {
                           className="text-sm"
                           style={{
                             fontFamily: 'Inter',
-                            color: i === selectedMonth ? '#57f1db' : '#dde4e1',
+                            color: i === selectedMonth ? colors.primary : colors.onSurface,
                           }}
                         >
                           {m}
@@ -213,27 +216,27 @@ export default function SettingsScreen() {
               <Pressable
                 className="flex-row items-center justify-between px-4 py-3 rounded-xl"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  backgroundColor: colors.glassBorder,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.08)',
+                  borderColor: colors.glassBorder,
                 }}
                 onPress={() => { setShowYearPicker(!showYearPicker); setShowMonthPicker(false); }}
               >
                 <Text
                   className="text-sm"
-                  style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+                  style={{ fontFamily: 'Inter', color: colors.onSurface }}
                 >
                   {selectedYear}
                 </Text>
-                <ChevronDown size={16} color="#859490" />
+                <ChevronDown size={16} color={colors.outline} />
               </Pressable>
               {showYearPicker && (
                 <View
                   className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl overflow-hidden"
                   style={{
-                    backgroundColor: 'rgba(26,33,31,0.98)',
+                    backgroundColor: colors.surfaceContainer,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderColor: colors.glassBorderStrong,
                   }}
                 >
                   {YEARS.map((y) => (
@@ -241,7 +244,7 @@ export default function SettingsScreen() {
                       key={y}
                       className="px-4 py-3"
                       style={{
-                        backgroundColor: y === selectedYear ? 'rgba(87,241,219,0.12)' : 'transparent',
+                        backgroundColor: y === selectedYear ? `${colors.primary}1F` : 'transparent',
                       }}
                       onPress={() => { setSelectedYear(y); setShowYearPicker(false); }}
                     >
@@ -249,7 +252,7 @@ export default function SettingsScreen() {
                         className="text-sm"
                         style={{
                           fontFamily: 'Inter',
-                          color: y === selectedYear ? '#57f1db' : '#dde4e1',
+                          color: y === selectedYear ? colors.primary : colors.onSurface,
                         }}
                       >
                         {y}
@@ -268,15 +271,15 @@ export default function SettingsScreen() {
           <View
             className="flex-row rounded-xl overflow-hidden"
             style={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
+              backgroundColor: colors.glassBorder,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
+              borderColor: colors.glassBorder,
             }}
           >
             <Pressable
               className="flex-1 py-3 items-center"
               style={{
-                backgroundColor: themeMode === 'light' ? 'rgba(87,241,219,0.1)' : 'transparent',
+                backgroundColor: themeMode === 'light' ? `${colors.primary}1A` : 'transparent',
               }}
               onPress={() => setThemeMode('light')}
             >
@@ -284,7 +287,7 @@ export default function SettingsScreen() {
                 className="text-sm font-medium"
                 style={{
                   fontFamily: 'Inter',
-                  color: themeMode === 'light' ? '#57f1db' : '#bacac5',
+                  color: themeMode === 'light' ? colors.primary : colors.onSurfaceVariant,
                 }}
               >
                 Claro
@@ -293,7 +296,7 @@ export default function SettingsScreen() {
             <Pressable
               className="flex-1 py-3 items-center"
               style={{
-                backgroundColor: themeMode === 'dark' ? 'rgba(87,241,219,0.1)' : 'transparent',
+                backgroundColor: themeMode === 'dark' ? `${colors.primary}1A` : 'transparent',
               }}
               onPress={() => setThemeMode('dark')}
             >
@@ -301,7 +304,7 @@ export default function SettingsScreen() {
                 className="text-sm font-medium"
                 style={{
                   fontFamily: 'Inter',
-                  color: themeMode === 'dark' ? '#57f1db' : '#bacac5',
+                  color: themeMode === 'dark' ? colors.primary : colors.onSurfaceVariant,
                 }}
               >
                 Oscuro
@@ -319,7 +322,7 @@ export default function SettingsScreen() {
                 className="text-4xl font-bold text-center"
                 style={{
                   fontFamily: 'Geist',
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                   minWidth: 120,
                 }}
                 keyboardType="decimal-pad"
@@ -330,7 +333,7 @@ export default function SettingsScreen() {
               />
               <Text
                 className="text-base font-semibold"
-                style={{ fontFamily: 'Inter', color: '#bacac5' }}
+                style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
               >
                 USDT
               </Text>
@@ -346,24 +349,24 @@ export default function SettingsScreen() {
             <View
               className="flex-row items-center justify-between rounded-xl px-4 py-3"
               style={{
-                backgroundColor: 'rgba(30,41,59,0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(87,241,219,0.2)',
+                borderColor: `${colors.primary}33`,
                 borderLeftWidth: 3,
-                borderLeftColor: 'rgba(87,241,219,0.4)',
+                borderLeftColor: `${colors.primary}66`,
               }}
             >
               <View className="flex-1">
-                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: '#dde4e1' }}>
+                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: colors.onSurface }}>
                   Dólar P2P (Bs.)
                 </Text>
-                <Text className="text-xs" style={{ fontFamily: 'Inter', color: '#859490' }}>
+                <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.outline }}>
                   Referencia Binance
                 </Text>
               </View>
               <TextInput
                 className="text-right text-sm font-medium"
-                style={{ fontFamily: 'Geist', color: '#dde4e1', width: 80 }}
+                style={{ fontFamily: 'Geist', color: colors.onSurface, width: 80 }}
                 keyboardType="decimal-pad"
                 value={p2pRate}
                 onChangeText={setP2pRate}
@@ -374,22 +377,22 @@ export default function SettingsScreen() {
             <View
               className="flex-row items-center justify-between rounded-xl px-4 py-3"
               style={{
-                backgroundColor: 'rgba(30,41,59,0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.08)',
+                borderColor: colors.glassBorder,
               }}
             >
               <View className="flex-1">
-                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: '#dde4e1' }}>
+                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: colors.onSurface }}>
                   Dólar BCV (Bs.)
                 </Text>
-                <Text className="text-xs" style={{ fontFamily: 'Inter', color: '#859490' }}>
+                <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.outline }}>
                   Oficial BCV
                 </Text>
               </View>
               <TextInput
                 className="text-right text-sm font-medium"
-                style={{ fontFamily: 'Geist', color: '#dde4e1', width: 80 }}
+                style={{ fontFamily: 'Geist', color: colors.onSurface, width: 80 }}
                 keyboardType="decimal-pad"
                 value={bcvUsdRate}
                 onChangeText={setBcvUsdRate}
@@ -400,22 +403,22 @@ export default function SettingsScreen() {
             <View
               className="flex-row items-center justify-between rounded-xl px-4 py-3"
               style={{
-                backgroundColor: 'rgba(30,41,59,0.6)',
+                backgroundColor: colors.glassSurface,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.08)',
+                borderColor: colors.glassBorder,
               }}
             >
               <View className="flex-1">
-                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: '#dde4e1' }}>
+                <Text className="text-sm font-medium" style={{ fontFamily: 'Inter', color: colors.onSurface }}>
                   Euro BCV (Bs.)
                 </Text>
-                <Text className="text-xs" style={{ fontFamily: 'Inter', color: '#859490' }}>
+                <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.outline }}>
                   Oficial BCV
                 </Text>
               </View>
               <TextInput
                 className="text-right text-sm font-medium"
-                style={{ fontFamily: 'Geist', color: '#dde4e1', width: 80 }}
+                style={{ fontFamily: 'Geist', color: colors.onSurface, width: 80 }}
                 keyboardType="decimal-pad"
                 value={bcvEurRate}
                 onChangeText={setBcvEurRate}
@@ -429,31 +432,31 @@ export default function SettingsScreen() {
           <SectionHeader icon={ChartBar} label="Resumen de Conversión" />
           <View className="gap-0">
             {/* Bolívares P2P */}
-            <View className="flex-row justify-between items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
-              <Text className="text-sm" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+            <View className="flex-row justify-between items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.glassBorder }}>
+              <Text className="text-sm" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
                 Bolívares (P2P)
               </Text>
-              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: '#dde4e1' }}>
+              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: colors.onSurface }}>
                 {conversionSummary.bolivaresP2P.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
               </Text>
             </View>
 
             {/* Dólares BCV */}
-            <View className="flex-row justify-between items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
-              <Text className="text-sm" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+            <View className="flex-row justify-between items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.glassBorder }}>
+              <Text className="text-sm" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
                 Dólares (BCV)
               </Text>
-              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: '#57f1db' }}>
+              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: colors.primary }}>
                 {conversionSummary.dolaresBCV.toLocaleString('en-US', { minimumFractionDigits: 2 })} $
               </Text>
             </View>
 
             {/* Euros BCV */}
             <View className="flex-row justify-between items-center py-3">
-              <Text className="text-sm" style={{ fontFamily: 'Inter', color: '#bacac5' }}>
+              <Text className="text-sm" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
                 Euros (BCV)
               </Text>
-              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: '#dde4e1' }}>
+              <Text className="text-sm font-semibold" style={{ fontFamily: 'Geist', color: colors.onSurface }}>
                 {conversionSummary.eurosBCV.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
               </Text>
             </View>
@@ -464,7 +467,7 @@ export default function SettingsScreen() {
         <Pressable
           className="py-4 rounded-full items-center"
           style={{
-            backgroundColor: '#57f1db',
+            backgroundColor: colors.primary,
             shadowColor: '#57f1db',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
@@ -476,10 +479,10 @@ export default function SettingsScreen() {
           }}
         >
           <View className="flex-row items-center gap-2">
-            <Save size={18} color="#00201c" />
+            <Save size={18} color={colors.onPrimary} />
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#00201c' }}
+              style={{ fontFamily: 'Inter', color: colors.onPrimary }}
             >
               Guardar Configuración
             </Text>
@@ -490,9 +493,9 @@ export default function SettingsScreen() {
         <Pressable
           className="py-4 rounded-full items-center mt-4"
           style={{
-            backgroundColor: 'rgba(255, 180, 171, 0.1)',
+            backgroundColor: `${colors.error}1A`,
             borderWidth: 1,
-            borderColor: 'rgba(255, 180, 171, 0.3)',
+            borderColor: `${colors.error}4D`,
           }}
           onPress={() => {
             Alert.alert(
@@ -524,10 +527,10 @@ export default function SettingsScreen() {
           }}
         >
           <View className="flex-row items-center gap-2">
-            <Text style={{ fontSize: 16, color: '#ffb4ab' }}>⚠️</Text>
+            <Text style={{ fontSize: 16, color: colors.error }}>⚠️</Text>
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#ffb4ab' }}
+              style={{ fontFamily: 'Inter', color: colors.error }}
             >
               Restablecer Base de Datos
             </Text>

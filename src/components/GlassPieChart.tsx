@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
+import { useThemeColors } from '@/store/theme-store';
 
 import type { CategorySummary } from '@/types';
 
@@ -9,6 +10,7 @@ interface GlassPieChartProps {
 }
 
 export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
+  const colors = useThemeColors();
   const isEmpty = !data || data.length === 0;
 
   const chartData = (data ?? []).map((item) => ({
@@ -24,14 +26,14 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
   const renderCenter = () => (
     <View className="items-center">
       <Text
-        style={{ fontFamily: 'Inter', color: '#bacac5', fontSize: 11 }}
+        style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, fontSize: 11 }}
       >
         {totalLabel ?? 'Total'}
       </Text>
       <Text
         style={{
           fontFamily: 'Inter',
-          color: '#dde4e1',
+          color: colors.onSurface,
           fontSize: 18,
           fontWeight: '700',
         }}
@@ -45,7 +47,7 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
     return (
       <View className="items-center py-6">
         <Text
-          style={{ fontFamily: 'Inter', color: '#bacac5', fontSize: 14 }}
+          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant, fontSize: 14 }}
         >
           Sin datos este mes
         </Text>
@@ -59,7 +61,7 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
         data={chartData}
         donut
         showText
-        textColor="#0e1513"
+        textColor={colors.inverseSurface}
         textSize={11}
         fontWeight="700"
         radius={90}
@@ -68,7 +70,7 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
         centerLabelComponent={renderCenter}
         focusOnPress
         showValuesAsLabels
-        strokeColor="rgba(255,255,255,0.08)"
+        strokeColor={colors.glassBorder}
         strokeWidth={1}
       />
       {/* ── Legend ── */}
@@ -82,7 +84,7 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
             <Text
               style={{
                 fontFamily: 'Inter',
-                color: '#bacac5',
+                color: colors.onSurfaceVariant,
                 fontSize: 12,
               }}
             >

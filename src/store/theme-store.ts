@@ -1,6 +1,94 @@
+import { useColorScheme } from 'react-native';
 import { create } from 'zustand';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
+
+export interface ThemeColors {
+  background: string;
+  onBackground: string;
+  surface: string;
+  surfaceContainer: string;
+  surfaceContainerHigh: string;
+  surfaceContainerHighest: string;
+  onSurface: string;
+  onSurfaceVariant: string;
+  outline: string;
+  outlineVariant: string;
+  primary: string;
+  onPrimary: string;
+  primaryContainer: string;
+  onPrimaryContainer: string;
+  secondary: string;
+  error: string;
+  errorContainer: string;
+  onErrorContainer: string;
+  success: string;
+  danger: string;
+  glassSurface: string;
+  glassBorder: string;
+  glassBorderStrong: string;
+  glassOverlay: string;
+  inverseSurface: string;
+  inverseOnSurface: string;
+}
+
+export const darkColors: ThemeColors = {
+  background: '#0e1513',
+  onBackground: '#dde4e1',
+  surface: '#1a211f',
+  surfaceContainer: '#1a211f',
+  surfaceContainerHigh: '#242b2a',
+  surfaceContainerHighest: '#2f3634',
+  onSurface: '#dde4e1',
+  onSurfaceVariant: '#bacac5',
+  outline: '#859490',
+  outlineVariant: '#3c4a46',
+  primary: '#57f1db',
+  onPrimary: '#003731',
+  primaryContainer: '#2dd4bf',
+  onPrimaryContainer: '#00574d',
+  secondary: '#adc6ff',
+  error: '#ffb4ab',
+  errorContainer: '#93000a',
+  onErrorContainer: '#ffdad6',
+  success: '#22c55e',
+  danger: '#ef4444',
+  glassSurface: 'rgba(30, 41, 59, 0.6)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
+  glassBorderStrong: 'rgba(255, 255, 255, 0.15)',
+  glassOverlay: 'rgba(30, 41, 59, 0.85)',
+  inverseSurface: '#dde4e1',
+  inverseOnSurface: '#2b3230',
+};
+
+export const lightColors: ThemeColors = {
+  background: '#f0f4f3',
+  onBackground: '#1a211f',
+  surface: '#ffffff',
+  surfaceContainer: '#e6edeb',
+  surfaceContainerHigh: '#dce4e1',
+  surfaceContainerHighest: '#d0d9d6',
+  onSurface: '#1a211f',
+  onSurfaceVariant: '#3c4a46',
+  outline: '#859490',
+  outlineVariant: '#bacac5',
+  primary: '#006b5f',
+  onPrimary: '#ffffff',
+  primaryContainer: '#62fae3',
+  onPrimaryContainer: '#00201c',
+  secondary: '#adc6ff',
+  error: '#ffb4ab',
+  errorContainer: '#93000a',
+  onErrorContainer: '#ffdad6',
+  success: '#22c55e',
+  danger: '#ef4444',
+  glassSurface: 'rgba(255, 255, 255, 0.7)',
+  glassBorder: 'rgba(0, 0, 0, 0.08)',
+  glassBorderStrong: 'rgba(0, 0, 0, 0.15)',
+  glassOverlay: 'rgba(255, 255, 255, 0.85)',
+  inverseSurface: '#1a211f',
+  inverseOnSurface: '#f0f4f3',
+};
 
 interface ThemeState {
   mode: ThemeMode;
@@ -11,3 +99,17 @@ export const useThemeStore = create<ThemeState>((set) => ({
   mode: 'system',
   setMode: (mode: ThemeMode) => set({ mode }),
 }));
+
+/**
+ * Hook que resuelve la paleta de colores según el modo actual.
+ * Si el modo es 'system', usa el color scheme del dispositivo.
+ */
+export function useThemeColors(): ThemeColors {
+  const mode = useThemeStore((s) => s.mode);
+  const systemScheme = useColorScheme();
+
+  if (mode === 'light') return lightColors;
+  if (mode === 'dark') return darkColors;
+  // system
+  return systemScheme === 'light' ? lightColors : darkColors;
+}

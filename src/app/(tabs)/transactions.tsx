@@ -5,6 +5,7 @@ import { Plus, Search, Inbox } from 'lucide-react-native/icons';
 import { useCategoryStore } from '@/store/category-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { Transaction, TransactionType } from '@/types';
+import { useThemeColors } from '@/store/theme-store';
 
 const formatCurrency = (amount: number): string =>
   `$${Math.abs(amount).toLocaleString('es-ES', {
@@ -35,6 +36,7 @@ const FILTERS: { key: FilterType; label: string }[] = [
 ];
 
 export default function TransactionsScreen() {
+  const colors = useThemeColors();
   const transactions = useTransactionStore((s) => s.transactions);
   const removeTransaction = useTransactionStore((s) => s.removeTransaction);
   const categories = useCategoryStore((s) => s.categories);
@@ -87,11 +89,11 @@ export default function TransactionsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0e1513' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, paddingTop: 60 }}>
-        <View style={{ backgroundColor: 'rgba(14, 21, 19, 0.8)', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#3c4a46' }}>
-          <Text style={{ fontFamily: 'Inter', fontWeight: 'bold', fontSize: 24, letterSpacing: -0.5, color: '#57f1db' }}>Financier</Text>
+        <View style={{ backgroundColor: `${colors.background}CC`, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#3c4a46' }}>
+          <Text style={{ fontFamily: 'Inter', fontWeight: 'bold', fontSize: 24, letterSpacing: -0.5, color: colors.primary }}>Financier</Text>
         </View>
       </View>
 
@@ -124,14 +126,14 @@ export default function TransactionsScreen() {
                       paddingHorizontal: 16,
                       paddingVertical: 8,
                       borderRadius: 20,
-                      backgroundColor: active ? '#57f1db' : '#1a211f',
+                      backgroundColor: active ? colors.primary : colors.surfaceContainer,
                       borderWidth: active ? 0 : 1,
                       borderColor: '#3c4a46',
                       ...(active ? { shadowColor: '#57f1db', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 } : {})
                     }}
                     onPress={() => setFilterType(f.key)}
                   >
-                    <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: active ? '#0e1513' : '#bacac5' }}>
+                    <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: active ? colors.background : colors.onSurfaceVariant }}>
                       {f.label}
                     </Text>
                   </Pressable>
@@ -151,8 +153,8 @@ export default function TransactionsScreen() {
           ) : (
             Array.from(grouped.entries()).map(([label, txs]) => (
               <View key={label} style={{ marginBottom: 24 }}>
-                <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: '#bacac5', marginBottom: 12, paddingHorizontal: 20 }}>{label}</Text>
-                <View style={{ backgroundColor: '#1a211f', borderRadius: 12, marginHorizontal: 20, overflow: 'hidden' }}>
+                <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color: colors.onSurfaceVariant, marginBottom: 12, paddingHorizontal: 20 }}>{label}</Text>
+                <View style={{ backgroundColor: colors.surfaceContainer, borderRadius: 12, marginHorizontal: 20, overflow: 'hidden' }}>
                   {txs.map((tx, index) => {
                     const cat = getCategoryInfo(tx.categoryId);
                     const isExpense = tx.type === 'expense';
@@ -167,15 +169,15 @@ export default function TransactionsScreen() {
                           alignItems: 'center',
                           padding: 16,
                           borderBottomWidth: index < txs.length - 1 ? 1 : 0,
-                          borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-                          backgroundColor: pressed ? 'rgba(87, 241, 219, 0.05)' : 'transparent'
+                          borderBottomColor: colors.glassBorder,
+                          backgroundColor: pressed ? `${colors.primary}0D` : 'transparent'
                         })}
                       >
                         <View style={{
                           width: 48,
                           height: 48,
                           borderRadius: 8,
-                          backgroundColor: cat?.color ? `${cat.color}20` : 'rgba(87, 241, 219, 0.1)',
+                          backgroundColor: cat?.color ? `${cat.color}20` : `${colors.primary}1A`,
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: 16
@@ -183,10 +185,10 @@ export default function TransactionsScreen() {
                           <Text style={{ fontSize: 20, color: cat?.color || '#57f1db' }}>{cat?.icon || '•'}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontFamily: 'Inter', fontSize: 15, fontWeight: '600', color: '#dde4e1' }}>{tx.description}</Text>
-                          <Text style={{ fontFamily: 'Inter', fontSize: 13, color: '#bacac5', marginTop: 2 }}>{cat?.name || 'Sin categoría'} • {time}</Text>
+                          <Text style={{ fontFamily: 'Inter', fontSize: 15, fontWeight: '600', color: colors.onSurface }}>{tx.description}</Text>
+                          <Text style={{ fontFamily: 'Inter', fontSize: 13, color: colors.onSurfaceVariant, marginTop: 2 }}>{cat?.name || 'Sin categoría'} • {time}</Text>
                         </View>
-                        <Text style={{ fontFamily: 'Inter', fontSize: 15, fontWeight: '600', color: isExpense ? '#ffb4ab' : '#57f1db', fontVariant: ['tabular-nums'] }}>
+                        <Text style={{ fontFamily: 'Inter', fontSize: 15, fontWeight: '600', color: isExpense ? colors.error : colors.primary, fontVariant: ['tabular-nums'] }}>
                           {isExpense ? '-' : '+'}{formatCurrency(tx.amount)}
                         </Text>
                       </Pressable>
@@ -201,10 +203,10 @@ export default function TransactionsScreen() {
 
       {/* FAB */}
       <Pressable
-        style={{ position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#57f1db', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6, zIndex: 30 }}
+        style={{ position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6, zIndex: 30 }}
         onPress={() => router.push('/add-transaction')}
       >
-        <Plus size={24} color="#0e1513" strokeWidth={2.5} />
+        <Plus size={24} color={colors.background} strokeWidth={2.5} />
       </Pressable>
     </View>
   );

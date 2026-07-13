@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useThemeColors } from '@/store/theme-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
@@ -55,6 +56,7 @@ export const AddTransactionSheet = ({
   const [paymentMethod, setPaymentMethod] = useState('bsc');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contentKey, setContentKey] = useState(0);
+  const colors = useThemeColors();
 
   // Control sheet visibility via ref methods
   useEffect(() => {
@@ -148,7 +150,7 @@ export const AddTransactionSheet = ({
         if (index === -1) onClose();
       }}
       backgroundStyle={{
-        backgroundColor: '#0e1513',
+        backgroundColor: colors.background,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
       }}
@@ -156,7 +158,7 @@ export const AddTransactionSheet = ({
         width: 32,
         height: 4,
         borderRadius: 9999,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: colors.glassBorderStrong,
       }}
       keyboardBlurBehavior="none"
     >
@@ -182,14 +184,14 @@ export const AddTransactionSheet = ({
               style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
               hitSlop={12}
             >
-              <Text style={{ fontFamily: 'Inter', fontSize: 20, color: '#bacac5' }}>✕</Text>
+              <Text style={{ fontFamily: 'Inter', fontSize: 20, color: colors.onSurfaceVariant }}>✕</Text>
             </Pressable>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <Text
                 style={{
                   fontFamily: 'Inter-SemiBold',
                   fontSize: 17,
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                 }}
               >
                 {title}
@@ -205,7 +207,7 @@ export const AddTransactionSheet = ({
                 fontFamily: 'Inter',
                 fontSize: 11,
                 fontWeight: '600',
-                color: '#bacac5',
+                color: colors.onSurfaceVariant,
                 textTransform: 'uppercase',
                 letterSpacing: 1.2,
                 marginBottom: 8,
@@ -219,7 +221,7 @@ export const AddTransactionSheet = ({
                   fontFamily: 'Inter',
                   fontSize: 28,
                   fontWeight: '600',
-                  color: '#57f1db',
+                  color: colors.primary,
                   marginBottom: 4,
                 }}
               >
@@ -230,7 +232,7 @@ export const AddTransactionSheet = ({
                   fontFamily: 'Inter-Bold',
                   fontSize: 64,
                   fontWeight: 'bold',
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                   lineHeight: 72,
                 }}
               >
@@ -246,7 +248,7 @@ export const AddTransactionSheet = ({
                 fontFamily: 'Inter',
                 fontSize: 11,
                 fontWeight: '600',
-                color: '#bacac5',
+                color: colors.onSurfaceVariant,
                 textTransform: 'uppercase',
                 letterSpacing: 1.2,
                 marginBottom: 10,
@@ -274,11 +276,11 @@ export const AddTransactionSheet = ({
                       borderWidth: 1,
                       gap: 6,
                       backgroundColor: active
-                        ? 'rgba(87,241,219,0.2)'
-                        : '#242b2a',
+                        ? colors.primary + '33'
+                        : colors.surfaceContainerHigh,
                       borderColor: active
-                        ? 'rgba(87,241,219,0.3)'
-                        : 'rgba(255,255,255,0.05)',
+                        ? colors.primary + '4D'
+                        : colors.glassBorder,
                     }}
                   >
                     <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
@@ -287,7 +289,7 @@ export const AddTransactionSheet = ({
                         fontFamily: 'Inter',
                         fontSize: 13,
                         fontWeight: '500',
-                        color: active ? '#57f1db' : '#bacac5',
+                        color: active ? colors.primary : colors.onSurfaceVariant,
                       }}
                     >
                       {cat.name}
@@ -305,7 +307,7 @@ export const AddTransactionSheet = ({
                 fontFamily: 'Inter',
                 fontSize: 11,
                 fontWeight: '600',
-                color: '#bacac5',
+                color: colors.onSurfaceVariant,
                 textTransform: 'uppercase',
                 letterSpacing: 1.2,
                 marginBottom: 10,
@@ -320,31 +322,31 @@ export const AddTransactionSheet = ({
                   <Pressable
                     key={pm.id}
                     onPress={() => setPaymentMethod(pm.id)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 9999,
+                    borderWidth: 1,
+                    backgroundColor: active
+                      ? colors.primary + '33'
+                      : colors.surfaceContainerHigh,
+                    borderColor: active
+                      ? colors.primary + '4D'
+                      : colors.glassBorder,
+                  }}
+                >
+                  <Text
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      borderRadius: 9999,
-                      borderWidth: 1,
-                      backgroundColor: active
-                        ? 'rgba(87,241,219,0.2)'
-                        : '#242b2a',
-                      borderColor: active
-                        ? 'rgba(87,241,219,0.3)'
-                        : 'rgba(255,255,255,0.05)',
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: '500',
+                      color: active ? colors.primary : colors.onSurfaceVariant,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: '500',
-                        color: active ? '#57f1db' : '#bacac5',
-                      }}
-                    >
-                      {pm.label}
-                    </Text>
+                    {pm.label}
+                  </Text>
                   </Pressable>
                 );
               })}
@@ -366,21 +368,21 @@ export const AddTransactionSheet = ({
                 flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#242b2a',
+                backgroundColor: colors.surfaceContainerHigh,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.05)',
+                borderColor: colors.glassBorder,
                 borderRadius: 16,
                 paddingHorizontal: 12,
                 paddingVertical: 14,
                 gap: 8,
               }}
             >
-              <Text style={{ fontSize: 16, color: '#bacac5' }}>📅</Text>
+              <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>📅</Text>
               <Text
                 style={{
                   fontFamily: 'Inter',
                   fontSize: 13,
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                   flexShrink: 1,
                 }}
                 numberOfLines={1}
@@ -395,26 +397,26 @@ export const AddTransactionSheet = ({
                 flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#242b2a',
+                backgroundColor: colors.surfaceContainerHigh,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.05)',
+                borderColor: colors.glassBorder,
                 borderRadius: 16,
                 paddingHorizontal: 12,
                 paddingVertical: 4,
                 gap: 8,
               }}
             >
-              <Text style={{ fontSize: 16, color: '#bacac5' }}>✏️</Text>
+              <Text style={{ fontSize: 16, color: colors.onSurfaceVariant }}>✏️</Text>
               <TextInput
                 placeholder="¿En qué gastaste?"
-                placeholderTextColor="#859490"
+                placeholderTextColor={colors.outline}
                 value={description}
                 onChangeText={setDescription}
                 style={{
                   flex: 1,
                   fontFamily: 'Inter',
                   fontSize: 13,
-                  color: '#dde4e1',
+                  color: colors.onSurface,
                   paddingVertical: 10,
                 }}
               />
@@ -445,17 +447,17 @@ export const AddTransactionSheet = ({
                         justifyContent: 'center',
                         alignItems: 'center',
                         backgroundColor: isBackspace
-                          ? 'rgba(255,180,171,0.1)'
-                          : 'rgba(255,255,255,0.05)',
+                          ? colors.error + '1A'
+                          : colors.glassBorder,
                       }}
-                      android_ripple={{ color: 'rgba(255,255,255,0.08)' }}
+                      android_ripple={{ color: colors.glassBorder }}
                     >
                       <Text
                         style={{
                           fontFamily: 'Inter',
                           fontSize: isBackspace ? 18 : 22,
                           fontWeight: '600',
-                          color: isBackspace ? '#ffb4ab' : '#dde4e1',
+                          color: isBackspace ? colors.error : colors.onSurface,
                         }}
                       >
                         {isBackspace ? '⌫' : key}
@@ -474,7 +476,7 @@ export const AddTransactionSheet = ({
             paddingHorizontal: 20,
             paddingTop: 8,
             paddingBottom: PADDING_2REM,
-            backgroundColor: '#0e1513',
+            backgroundColor: colors.background,
           }}
         >
           <Pressable
@@ -485,13 +487,13 @@ export const AddTransactionSheet = ({
               height: 56,
               borderRadius: 24,
               backgroundColor: isSubmitting
-                ? 'rgba(87,241,219,0.5)'
-                : '#57f1db',
+                ? colors.primary + '80'
+                : colors.primary,
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'center',
               gap: 8,
-              shadowColor: '#57f1db',
+              shadowColor: colors.primary,
               shadowOpacity: 0.3,
               shadowRadius: 25,
               shadowOffset: { width: 0, height: 20 },
@@ -503,12 +505,12 @@ export const AddTransactionSheet = ({
                 fontFamily: 'Inter-SemiBold',
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#00201c',
+                color: colors.onPrimary,
               }}
             >
               {saveLabel}
             </Text>
-            <Text style={{ fontSize: 18, color: '#00201c' }}>→</Text>
+            <Text style={{ fontSize: 18, color: colors.onPrimary }}>→</Text>
           </Pressable>
         </View>
       </View>

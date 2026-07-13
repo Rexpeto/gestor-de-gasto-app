@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { FolderOpen, Plus } from 'lucide-react-native/icons';
 import { useCategoryStore } from '@/store/category-store';
 import type { Category, TransactionType } from '@/types';
+import { useThemeColors } from '@/store/theme-store';
 
 type TabType = 'income' | 'expense';
 
@@ -14,6 +15,7 @@ const TABS: { key: TabType; label: string }[] = [
 ];
 
 export default function CategoriesScreen() {
+  const colors = useThemeColors();
   const categories = useCategoryStore((s) => s.categories);
   const removeCategory = useCategoryStore((s) => s.removeCategory);
   const [activeTab, setActiveTab] = useState<TabType>('expense');
@@ -44,12 +46,12 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <View className="flex-1" style={{ backgroundColor: '#0e1513' }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       {/* ── Header ── */}
       <View className="px-5 pt-16 pb-4">
         <Text
           className="text-xl font-bold"
-          style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurface }}
         >
           Categorías
         </Text>
@@ -64,10 +66,10 @@ export default function CategoriesScreen() {
               className="px-4 py-2 rounded-lg"
               style={{
                 backgroundColor:
-                  activeTab === tab.key ? 'rgba(87, 241, 219, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+                  activeTab === tab.key ? `${colors.primary}26` : colors.glassSurface,
                 borderWidth: 1,
                 borderColor:
-                  activeTab === tab.key ? 'rgba(87, 241, 219, 0.3)' : 'rgba(255,255,255,0.08)',
+                  activeTab === tab.key ? `${colors.primary}4D` : colors.glassBorder,
               }}
               onPress={() => setActiveTab(tab.key)}
             >
@@ -75,7 +77,7 @@ export default function CategoriesScreen() {
                 className="text-sm font-medium"
                 style={{
                   fontFamily: 'Inter',
-                  color: activeTab === tab.key ? '#57f1db' : '#bacac5',
+                  color: activeTab === tab.key ? colors.primary : colors.onSurfaceVariant,
                 }}
               >
                 {tab.label}
@@ -89,10 +91,10 @@ export default function CategoriesScreen() {
       <ScrollView className="flex-1 px-5" contentContainerClassName="pb-28">
         {filteredCategories.length === 0 ? (
           <View className="py-16 items-center">
-            <FolderOpen size={48} color="#bacac5" />
+            <FolderOpen size={48} color={colors.onSurfaceVariant} />
             <Text
               className="text-center mt-3"
-              style={{ fontFamily: 'Inter', color: '#bacac5' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
             >
               No hay categorías de {activeTab === 'income' ? 'ingresos' : 'gastos'}
             </Text>
@@ -101,9 +103,9 @@ export default function CategoriesScreen() {
           <View
             className="rounded-2xl overflow-hidden"
             style={{
-              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              backgroundColor: colors.glassSurface,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderColor: colors.glassBorder,
             }}
           >
             {filteredCategories.map((cat, index) => (
@@ -128,7 +130,7 @@ export default function CategoriesScreen() {
                       left: 56,
                       right: 0,
                       height: 1,
-                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      backgroundColor: colors.glassBorder,
                     }}
                   />
                 )}
@@ -141,7 +143,7 @@ export default function CategoriesScreen() {
                 <View className="flex-1 ml-3">
                   <Text
                     className="text-base font-medium"
-                    style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+                    style={{ fontFamily: 'Inter', color: colors.onSurface }}
                   >
                     {cat.name}
                   </Text>
@@ -152,7 +154,7 @@ export default function CategoriesScreen() {
                     />
                     <Text
                       className="text-xs"
-                      style={{ fontFamily: 'Inter', color: '#bacac5' }}
+                      style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
                     >
                       {cat.type === 'income' ? 'Ingreso' : 'Gasto'}
                     </Text>
@@ -160,7 +162,7 @@ export default function CategoriesScreen() {
                 </View>
                 <Text
                   className="text-xs"
-                  style={{ fontFamily: 'Inter', color: '#859490' }}
+                  style={{ fontFamily: 'Inter', color: colors.outline }}
                 >
                   Mantené presionado
                 </Text>
@@ -173,10 +175,10 @@ export default function CategoriesScreen() {
       {/* ── FAB (Teal) ── */}
       <Pressable
         className="absolute bottom-24 right-5 w-14 h-14 rounded-full items-center justify-center"
-        style={{ backgroundColor: '#57f1db' }}
+        style={{ backgroundColor: colors.primary }}
         onPress={() => router.push('/add-category')}
       >
-        <Plus size={24} color="#003731" />
+        <Plus size={24} color={colors.onPrimary} />
       </Pressable>
     </View>
   );

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { useCategoryStore } from '@/store/category-store';
+import { useThemeColors } from '@/store/theme-store';
 import type { TransactionType } from '@/types';
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
@@ -41,6 +42,7 @@ export default function AddCategoryScreen() {
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [type, setType] = useState<TransactionType>('expense');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const colors = useThemeColors();
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
@@ -62,7 +64,7 @@ export default function AddCategoryScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1"
-      style={{ backgroundColor: '#0e1513' }}
+      style={{ backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -73,7 +75,7 @@ export default function AddCategoryScreen() {
         {/* ── Type Selector ── */}
         <Text
           className="text-xs font-semibold uppercase tracking-widest mb-2"
-          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
         >
           Tipo
         </Text>
@@ -84,10 +86,10 @@ export default function AddCategoryScreen() {
               className="flex-1 py-3.5 rounded-xl items-center"
               style={{
                 backgroundColor:
-                  type === opt.value ? 'rgba(87, 241, 219, 0.12)' : 'rgba(30, 41, 59, 0.6)',
+                  type === opt.value ? colors.primary + '1F' : colors.glassSurface,
                 borderWidth: 1,
                 borderColor:
-                  type === opt.value ? 'rgba(87, 241, 219, 0.3)' : 'rgba(255,255,255,0.08)',
+                  type === opt.value ? colors.primary + '4D' : colors.glassBorder,
               }}
               onPress={() => setType(opt.value)}
             >
@@ -95,7 +97,7 @@ export default function AddCategoryScreen() {
                 className="text-sm font-medium"
                 style={{
                   fontFamily: 'Inter',
-                  color: type === opt.value ? '#57f1db' : '#bacac5',
+                  color: type === opt.value ? colors.primary : colors.onSurfaceVariant,
                 }}
               >
                 {opt.label}
@@ -108,21 +110,21 @@ export default function AddCategoryScreen() {
         <View
           className="rounded-xl p-3 mb-4"
           style={{
-            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            backgroundColor: colors.glassSurface,
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: colors.glassBorder,
           }}
         >
           <TextField isRequired>
-            <Label className="text-xs uppercase tracking-wider font-sans text-[#bacac5]">
+            <Label className="text-xs uppercase tracking-wider font-sans" style={{ color: colors.onSurfaceVariant }}>
               Nombre
             </Label>
             <Input
               placeholder="Ej: Supermercado"
-              placeholderTextColor="#859490"
+              placeholderTextColor={colors.outline}
               value={name}
               onChangeText={setName}
-              style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurface }}
             />
           </TextField>
         </View>
@@ -130,7 +132,7 @@ export default function AddCategoryScreen() {
         {/* ── Icon Picker ── */}
         <Text
           className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
-          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
         >
           Icono
         </Text>
@@ -141,10 +143,10 @@ export default function AddCategoryScreen() {
               className="w-11 h-11 rounded-xl items-center justify-center"
               style={{
                 backgroundColor:
-                  icon === ic ? 'rgba(87, 241, 219, 0.12)' : 'rgba(30, 41, 59, 0.6)',
+                  icon === ic ? colors.primary + '1F' : colors.glassSurface,
                 borderWidth: 1,
                 borderColor:
-                  icon === ic ? 'rgba(87, 241, 219, 0.3)' : 'rgba(255,255,255,0.08)',
+                  icon === ic ? colors.primary + '4D' : colors.glassBorder,
               }}
               onPress={() => setIcon(ic)}
             >
@@ -156,7 +158,7 @@ export default function AddCategoryScreen() {
         {/* ── Color Picker ── */}
         <Text
           className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
-          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
         >
           Color
         </Text>
@@ -168,7 +170,7 @@ export default function AddCategoryScreen() {
               style={{
                 backgroundColor: c,
                 borderWidth: color === c ? 2 : 0,
-                borderColor: color === c ? '#57f1db' : 'transparent',
+                borderColor: color === c ? colors.primary : 'transparent',
               }}
               onPress={() => setColor(c)}
             >
@@ -186,14 +188,14 @@ export default function AddCategoryScreen() {
             style={{
               backgroundColor: color + '20',
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
+              borderColor: colors.glassBorder,
             }}
           >
             <Text style={{ fontSize: 36 }}>{icon}</Text>
           </View>
           <Text
             className="font-medium mt-2"
-            style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+            style={{ fontFamily: 'Inter', color: colors.onSurface }}
           >
             {name || 'Nombre'}
           </Text>
@@ -203,13 +205,13 @@ export default function AddCategoryScreen() {
         <View className="mt-8 gap-3">
           <Pressable
             className="w-full py-3.5 rounded-full items-center"
-            style={{ backgroundColor: isSubmitting ? 'rgba(87,241,219,0.5)' : '#57f1db' }}
+            style={{ backgroundColor: isSubmitting ? colors.primary + '80' : colors.primary }}
             disabled={isSubmitting}
             onPress={handleSubmit}
           >
             <Text
               className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: '#003731' }}
+              style={{ fontFamily: 'Inter', color: colors.onPrimary }}
             >
               Crear categoría
             </Text>
@@ -217,15 +219,15 @@ export default function AddCategoryScreen() {
           <Pressable
             className="w-full py-3.5 rounded-full items-center"
             style={{
-              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              backgroundColor: colors.glassSurface,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
+              borderColor: colors.glassBorder,
             }}
             onPress={() => router.back()}
           >
             <Text
               className="text-base font-medium"
-              style={{ fontFamily: 'Inter', color: '#bacac5' }}
+              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
             >
               Cancelar
             </Text>
