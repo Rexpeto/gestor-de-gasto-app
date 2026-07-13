@@ -1,0 +1,43 @@
+export type TransactionType = 'income' | 'expense';
+
+export interface Category {
+  id: number;
+  name: string;
+  icon: string;
+  color: string;
+  type: TransactionType;
+}
+
+export interface Transaction {
+  id: number;
+  amount: number;
+  type: TransactionType;
+  categoryId: number;
+  description: string;
+  date: string; // ISO 8601 (YYYY-MM-DD)
+  createdAt: string;
+}
+
+export interface TransactionFormData {
+  amount: number;
+  type: TransactionType;
+  categoryId: number;
+  description: string;
+  date: string;
+}
+
+export interface MonthlySummary {
+  month: string; // YYYY-MM
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+}
+
+export interface CategorySummary {
+  categoryId: number;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  total: number;
+  percentage: number;
+}

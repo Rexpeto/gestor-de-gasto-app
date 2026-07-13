@@ -1,0 +1,237 @@
+import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import { Input } from 'heroui-native/input';
+import { Label } from 'heroui-native/label';
+import { TextField } from 'heroui-native/text-field';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
+
+import { useCategoryStore } from '@/store/category-store';
+import type { TransactionType } from '@/types';
+
+const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
+  { value: 'expense', label: 'Gasto' },
+  { value: 'income', label: 'Ingreso' },
+];
+
+const PRESET_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6',
+  '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
+  '#f43f5e', '#78716c', '#64748b',
+];
+
+const PRESET_ICONS = [
+  '🍽️', '🚗', '🏠', '💡', '🏥', '🎬', '🛍️', '📚',
+  '💰', '💻', '📈', '🛒', '📥', '📤', '🎮', '☕',
+  '✈️', '👕', '💊', '🎓', '🏋️', '🐾', '🎁', '💎',
+];
+
+export default function AddCategoryScreen() {
+  const addCategory = useCategoryStore((s) => s.addCategory);
+  const [name, setName] = useState('');
+  const [icon, setIcon] = useState('📦');
+  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [type, setType] = useState<TransactionType>('expense');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = useCallback(async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Ingresá un nombre para la categoría');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addCategory({ name: name.trim(), icon, color, type });
+      router.back();
+    } catch {
+      Alert.alert('Error', 'No se pudo crear la categoría');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [addCategory, color, icon, name, router, type]);
+
+  return (
+    <KeyboardAvoidingView
+      className="flex-1"
+      style={{ backgroundColor: '#0e1513' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-5 pt-2 pb-12"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ── Type Selector ── */}
+        <Text
+          className="text-xs font-semibold uppercase tracking-widest mb-2"
+          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+        >
+          Tipo
+        </Text>
+        <View className="flex-row gap-2 mb-5">
+          {TYPE_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.value}
+              className="flex-1 py-3.5 rounded-xl items-center"
+              style={{
+                backgroundColor:
+                  type === opt.value ? 'rgba(87, 241, 219, 0.12)' : 'rgba(30, 41, 59, 0.6)',
+                borderWidth: 1,
+                borderColor:
+                  type === opt.value ? 'rgba(87, 241, 219, 0.3)' : 'rgba(255,255,255,0.08)',
+              }}
+              onPress={() => setType(opt.value)}
+            >
+              <Text
+                className="text-sm font-medium"
+                style={{
+                  fontFamily: 'Inter',
+                  color: type === opt.value ? '#57f1db' : '#bacac5',
+                }}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ── Name ── */}
+        <View
+          className="rounded-xl p-3 mb-4"
+          style={{
+            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
+          }}
+        >
+          <TextField isRequired>
+            <Label className="text-xs uppercase tracking-wider font-sans text-[#bacac5]">
+              Nombre
+            </Label>
+            <Input
+              placeholder="Ej: Supermercado"
+              placeholderTextColor="#859490"
+              value={name}
+              onChangeText={setName}
+              style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+            />
+          </TextField>
+        </View>
+
+        {/* ── Icon Picker ── */}
+        <Text
+          className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
+          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+        >
+          Icono
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {PRESET_ICONS.map((ic) => (
+            <Pressable
+              key={ic}
+              className="w-11 h-11 rounded-xl items-center justify-center"
+              style={{
+                backgroundColor:
+                  icon === ic ? 'rgba(87, 241, 219, 0.12)' : 'rgba(30, 41, 59, 0.6)',
+                borderWidth: 1,
+                borderColor:
+                  icon === ic ? 'rgba(87, 241, 219, 0.3)' : 'rgba(255,255,255,0.08)',
+              }}
+              onPress={() => setIcon(ic)}
+            >
+              <Text style={{ fontSize: 20 }}>{ic}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ── Color Picker ── */}
+        <Text
+          className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
+          style={{ fontFamily: 'Inter', color: '#bacac5' }}
+        >
+          Color
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {PRESET_COLORS.map((c) => (
+            <Pressable
+              key={c}
+              className="w-10 h-10 rounded-xl items-center justify-center"
+              style={{
+                backgroundColor: c,
+                borderWidth: color === c ? 2 : 0,
+                borderColor: color === c ? '#57f1db' : 'transparent',
+              }}
+              onPress={() => setColor(c)}
+            >
+              {color === c && (
+                <Text className="text-white text-sm font-bold">✓</Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+
+        {/* ── Preview ── */}
+        <View className="mt-6 items-center">
+          <View
+            className="w-20 h-20 rounded-2xl items-center justify-center"
+            style={{
+              backgroundColor: color + '20',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <Text style={{ fontSize: 36 }}>{icon}</Text>
+          </View>
+          <Text
+            className="font-medium mt-2"
+            style={{ fontFamily: 'Inter', color: '#dde4e1' }}
+          >
+            {name || 'Nombre'}
+          </Text>
+        </View>
+
+        {/* ── Submit ── */}
+        <View className="mt-8 gap-3">
+          <Pressable
+            className="w-full py-3.5 rounded-full items-center"
+            style={{ backgroundColor: isSubmitting ? 'rgba(87,241,219,0.5)' : '#57f1db' }}
+            disabled={isSubmitting}
+            onPress={handleSubmit}
+          >
+            <Text
+              className="text-base font-semibold"
+              style={{ fontFamily: 'Inter', color: '#003731' }}
+            >
+              Crear categoría
+            </Text>
+          </Pressable>
+          <Pressable
+            className="w-full py-3.5 rounded-full items-center"
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.08)',
+            }}
+            onPress={() => router.back()}
+          >
+            <Text
+              className="text-base font-medium"
+              style={{ fontFamily: 'Inter', color: '#bacac5' }}
+            >
+              Cancelar
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}

@@ -1,18 +1,130 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import '../global.css';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { Stack } from 'expo-router';
+import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
+import { HeroUINativeProvider } from 'heroui-native/provider';
+import { AddTransactionSheet } from '@/components/AddTransactionSheet';
+import { useTransactionStore } from '@/store/transaction-store';
+import { useCategoryStore } from '@/store/category-store';
+import { useThemeStore } from '@/store/theme-store';
+import { useSheetStore } from '@/store/sheet-store';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const [appIsReady, setAppIsReady] = useState(false);
+  const themeMode = useThemeStore((s) => s.mode);
+
+  const loadTransactions = useTransactionStore((s) => s.loadTransactions);
+  const loadMonthlySummary = useTransactionStore((s) => s.loadMonthlySummary);
+  const loadCategorySummaries = useTransactionStore((s) => s.loadCategorySummaries);
+  const loadCategories = useCategoryStore((s) => s.loadCategories);
+  const sheetIsOpen = useSheetStore((s) => s.isOpen);
+  const sheetType = useSheetStore((s) => s.type);
+  const closeSheet = useSheetStore((s) => s.closeSheet);
+
+  useEffect(() => {
+    async function init() {
+      try {
+        await Font.loadAsync({
+          Inter: require('@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'),
+          'Inter-SemiBold': require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
+          'Inter-Bold': require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
+        }).catch(() => {
+          console.warn('⚠️ Inter not loaded, using system font');
+        });
+
+        await Promise.all([
+          loadCategories(),
+          loadTransactions(),
+          loadMonthlySummary(),
+          loadCategorySummaries(),
+        ]);
+      } catch (e) {
+        console.warn('Error loading initial data:', e);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+    init();
+  }, []);
+
+  // Hide splash once app is ready (with safety timeout)
+  useEffect(() => {
+    if (appIsReady) {
+      const hide = async () => {
+        try {
+          await SplashScreen.hideAsync();
+        } catch {
+          // Expo Go sometimes doesn't support hideAsync — ignore
+        }
+      };
+      hide();
+    }
+  }, [appIsReady]);
+
+  const statusBarStyle =
+    themeMode === 'dark'
+      ? 'light'
+      : themeMode === 'light'
+        ? 'dark'
+        : 'auto';
+
+  if (!appIsReady) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#0e1513' }} />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <HeroUINativeProvider>
+          <View className={`flex-1 bg-background ${themeMode === 'system' ? '' : themeMode}`}>
+            <StatusBar style={statusBarStyle} />
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: '#0e1513' },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="add-transaction"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
+              <Stack.Screen
+                name="add-category"
+                options={{
+                  presentation: 'modal',
+                  title: 'Nueva categoría',
+                  headerStyle: { backgroundColor: '#0e1513' },
+                  headerTintColor: '#dde4e1',
+                }}
+              />
+            </Stack>
+
+            {/* BottomSheet a nivel raíz — POR ENCIMA de los tabs */}
+            <AddTransactionSheet
+              isOpen={sheetIsOpen}
+              initialType={sheetType}
+              onClose={closeSheet}
+            />
+          </View>
+        </HeroUINativeProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
