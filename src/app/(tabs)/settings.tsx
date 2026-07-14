@@ -1,8 +1,7 @@
 import {
     ArrowLeftRight,
-    CalendarDays,
-    ChartBar,
     ChevronDown,
+    ChevronRight,
     Eye,
     EyeOff,
     Palette,
@@ -10,7 +9,7 @@ import {
     TriangleAlert,
     Wallet,
 } from "lucide-react-native/icons";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Alert,
     Pressable,
@@ -25,7 +24,14 @@ import { resetDatabase } from "@/db/database";
 import { useBudgetStore } from "@/store/budget-store";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
-import { useThemeColors, useThemeStore } from "@/store/theme-store";
+import { useRateStore } from "@/store/rate-store";
+import {
+    ACCENT_COLOR_NAMES,
+    ACCENT_COLORS,
+    type AccentColorName,
+    useThemeColors,
+    useThemeStore,
+} from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 
 const MONTHS = [
@@ -43,7 +49,18 @@ const MONTHS = [
     "Diciembre",
 ];
 
-const YEARS = ["2023", "2024", "2025"];
+const YEARS = ["2023", "2024", "2025", "2026", "2027"];
+
+const ACCENT_OPTIONS: AccentColorName[] = [
+    "blue",
+    "pink",
+    "purple",
+    "green",
+    "cyan",
+    "orange",
+];
+
+// ─── Components ───────────────────────────────────────────────────────────────
 
 function GlassPanel({
     children,
@@ -85,6 +102,49 @@ function GlassPanel({
     );
 }
 
+function CollapsiblePanel({
+    icon: Icon,
+    label,
+    defaultOpen,
+    children,
+}: {
+    icon: React.ComponentType<{ size?: number; color?: string }>;
+    label: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}) {
+    const colors = useThemeColors();
+    const [open, setOpen] = useState(defaultOpen ?? true);
+
+    return (
+        <GlassPanel>
+            <Pressable
+                className="flex-row items-center justify-between"
+                onPress={() => setOpen(!open)}
+            >
+                <View className="flex-row items-center gap-3">
+                    <Icon size={20} color={colors.primary} />
+                    <Text
+                        className="text-xs font-semibold uppercase tracking-widest"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurfaceVariant,
+                        }}
+                    >
+                        {label}
+                    </Text>
+                </View>
+                {open ? (
+                    <ChevronDown size={18} color={colors.onSurfaceVariant} />
+                ) : (
+                    <ChevronRight size={18} color={colors.onSurfaceVariant} />
+                )}
+            </Pressable>
+            {open && <View className="mt-4">{children}</View>}
+        </GlassPanel>
+    );
+}
+
 function SectionHeader({
     icon: Icon,
     label,
@@ -106,16 +166,58 @@ function SectionHeader({
     );
 }
 
+function ColorCircle({
+    color,
+    selected,
+    onPress,
+}: {
+    color: string;
+    selected: boolean;
+    onPress: () => void;
+}) {
+    return (
+        <Pressable onPress={onPress} className="items-center">
+            <View
+                style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: color,
+                    borderWidth: selected ? 3 : 0,
+                    borderColor: selected ? "#ffffff" : "transparent",
+                    shadowColor: selected ? color : "transparent",
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: selected ? 0.8 : 0,
+                    shadowRadius: 10,
+                    elevation: selected ? 6 : 0,
+                }}
+            />
+        </Pressable>
+    );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function SettingsScreen() {
     const colors = useThemeColors();
     const themeMode = useThemeStore((s) => s.mode);
     const setThemeMode = useThemeStore((s) => s.setMode);
-    const totalBudget = useBudgetStore((s) => s.totalBudget);
-    const exchangeRates = useBudgetStore((s) => s.exchangeRates);
+    const primaryAccent = useThemeStore((s) => s.primaryAccent);
+    const setPrimaryAccent = useThemeStore((s) => s.setPrimaryAccent);
+    const secondaryAccent = useThemeStore((s) => s.secondaryAccent);
+    const setSecondaryAccent = useThemeStore((s) => s.setSecondaryAccent);
+
     const showCategories = usePreferencesStore((s) => s.showCategories);
     const showPresupuesto = usePreferencesStore((s) => s.showPresupuesto);
+    const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
+    const setMonthlyBudget = usePreferencesStore((s) => s.setMonthlyBudget);
     const setShowCategories = usePreferencesStore((s) => s.setShowCategories);
     const setShowPresupuesto = usePreferencesStore((s) => s.setShowPresupuesto);
+
+    const storeRatesByMonth = useRateStore((s) => s.ratesByMonth);
+    const loadRates = useRateStore((s) => s.loadRates);
+    const setRates = useRateStore((s) => s.setRates);
+    const loaded = useRateStore((s) => s.loaded);
 
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(
@@ -123,23 +225,120 @@ export default function SettingsScreen() {
     );
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [showYearPicker, setShowYearPicker] = useState(false);
-    const [budgetValue, setBudgetValue] = useState(String(totalBudget()));
-    const [p2pRate, setP2pRate] = useState("825.00");
-    const [bcvUsdRate, setBcvUsdRate] = useState("0.87");
-    const [bcvEurRate, setBcvEurRate] = useState("1.20");
+    const [budgetValue, setBudgetValue] = useState(
+        String(monthlyBudget > 0 ? monthlyBudget : ""),
+    );
+    const [expandedMonths, setExpandedMonths] = useState<Set<string>>(
+        new Set([`${new Date().getMonth()}-${new Date().getFullYear()}`]),
+    );
 
-    const conversionSummary = useMemo(() => {
-        const p2p = parseFloat(p2pRate) || 0;
-        const bcvUsd = parseFloat(bcvUsdRate) || 0;
-        const bcvEur = parseFloat(bcvEurRate) || 0;
-        const budget = parseFloat(budgetValue) || 0;
+    // Local string state for rate inputs (allows free typing)
+    const [inputRates, setInputRates] = useState<
+        Record<string, { p2p: string; bcvUsd: string; bcvEur: string }>
+    >({});
 
-        const bolivaresP2P = budget * p2p;
-        const dolaresBCV = budget / bcvUsd;
-        const eurosBCV = budget / bcvEur;
+    // Sync budgetValue when monthlyBudget loads from DB (async)
+    const budgetInitialized = useRef(false);
+    useEffect(() => {
+        if (monthlyBudget > 0 && !budgetInitialized.current) {
+            budgetInitialized.current = true;
+            setBudgetValue(String(monthlyBudget));
+        }
+    }, [monthlyBudget]);
 
-        return { bolivaresP2P, dolaresBCV, eurosBCV };
-    }, [budgetValue, p2pRate, bcvUsdRate, bcvEurRate]);
+    // Load persisted rates on mount and populate inputRates
+    const initRef = useRef(false);
+    useEffect(() => {
+        if (!loaded) {
+            loadRates();
+        }
+    }, [loaded, loadRates]);
+
+    useEffect(() => {
+        if (loaded && !initRef.current) {
+            initRef.current = true;
+            const initial: Record<
+                string,
+                { p2p: string; bcvUsd: string; bcvEur: string }
+            > = {};
+            for (const [key, rates] of Object.entries(storeRatesByMonth)) {
+                initial[key] = {
+                    p2p: String(rates.p2pRate),
+                    bcvUsd: String(rates.bcvUsdRate),
+                    bcvEur: String(rates.bcvEurRate),
+                };
+            }
+            setInputRates(initial);
+        }
+    }, [loaded, storeRatesByMonth]);
+
+    function getInputRates(key: string) {
+        return (
+            inputRates[key] ?? { p2p: "", bcvUsd: "", bcvEur: "" }
+        );
+    }
+
+    function updateRate(
+        key: string,
+        field: "p2p" | "bcvUsd" | "bcvEur",
+        value: string,
+    ) {
+        setInputRates((prev) => ({
+            ...prev,
+            [key]: { ...(prev[key] ?? { p2p: "", bcvUsd: "", bcvEur: "" }), [field]: value },
+        }));
+    }
+
+    const yearMonths = MONTHS.map((_, i) => ({
+        index: i,
+        key: `${i}-${selectedYear}`,
+    }));
+
+    function toggleMonth(key: string) {
+        setExpandedMonths((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    }
+
+    /** Persist rates + budget to store + DB */
+    async function handleSave() {
+        console.log('[settings] handleSave — all values:', {
+            budgetValue,
+            budget: parseFloat(budgetValue) || 0,
+            selectedMonth,
+            selectedYear,
+            inputRates,
+            storeMonthlyBudget: monthlyBudget,
+        });
+        try {
+            // Save monthly budget
+            const budget = parseFloat(budgetValue) || 0;
+            await setMonthlyBudget(budget);
+
+            // Save rates for all months
+            const year = parseInt(selectedYear, 10);
+            for (let m = 0; m < 12; m++) {
+                const key = `${m}-${selectedYear}`;
+                const rates = inputRates[key];
+                if (!rates) continue;
+                const p2pRate = parseFloat(rates.p2p) || 0;
+                const bcvUsdRate = parseFloat(rates.bcvUsd) || 0;
+                const bcvEurRate = parseFloat(rates.bcvEur) || 0;
+                if (p2pRate === 0 && bcvUsdRate === 0 && bcvEurRate === 0) continue;
+                await setRates(m, year, { p2pRate, bcvUsdRate, bcvEurRate });
+            }
+            console.log('[settings] handleSave — done, store monthlyBudget:', usePreferencesStore.getState().monthlyBudget);
+            showSuccessToast("Configuración guardada correctamente");
+        } catch (e) {
+            console.error('[settings] handleSave error:', e);
+            showErrorToast("Error al guardar la configuración");
+        }
+    }
+
+    // ─── Render ─────────────────────────────────────────────────────────────
 
     return (
         <ScrollView
@@ -147,9 +346,8 @@ export default function SettingsScreen() {
             style={{ backgroundColor: colors.background }}
             contentContainerClassName="pb-28"
         >
-            {/* ── Content ── */}
             <View className="px-5 gap-5">
-                {/* Section Title */}
+                {/* ── Title ── */}
                 <View className="mt-12">
                     <Text
                         className="text-2xl font-bold"
@@ -164,13 +362,176 @@ export default function SettingsScreen() {
                             color: colors.onSurfaceVariant,
                         }}
                     >
-                        Define tu presupuesto y tasas de mercado.
+                        Personaliza la app a tu gusto.
                     </Text>
                 </View>
 
-                {/* ── Periodo Fiscal ── */}
+                {/* ════════════════════════════════════════════════════════════ */}
+                {/* ── Apariencia ── */}
+                {/* ════════════════════════════════════════════════════════════ */}
                 <GlassPanel>
-                    <SectionHeader icon={CalendarDays} label="Periodo Fiscal" />
+                    <SectionHeader icon={Palette} label="Apariencia" />
+
+                    {/* Modo */}
+                    <Text
+                        className="text-sm font-medium mb-2"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurface,
+                        }}
+                    >
+                        Modo
+                    </Text>
+                    <View
+                        className="flex-row rounded-xl overflow-hidden mb-5"
+                        style={{
+                            backgroundColor: colors.glassBorder,
+                            borderWidth: 1,
+                            borderColor: colors.glassBorder,
+                        }}
+                    >
+                        <Pressable
+                            className="flex-1 py-3 items-center"
+                            style={{
+                                backgroundColor:
+                                    themeMode === "light"
+                                        ? `${colors.primary}1A`
+                                        : "transparent",
+                            }}
+                            onPress={() => setThemeMode("light")}
+                        >
+                            <Text
+                                className="text-sm font-medium"
+                                style={{
+                                    fontFamily: "Inter",
+                                    color:
+                                        themeMode === "light"
+                                            ? colors.primary
+                                            : colors.onSurfaceVariant,
+                                }}
+                            >
+                                Claro
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            className="flex-1 py-3 items-center"
+                            style={{
+                                backgroundColor:
+                                    themeMode === "dark"
+                                        ? `${colors.primary}1A`
+                                        : "transparent",
+                            }}
+                            onPress={() => setThemeMode("dark")}
+                        >
+                            <Text
+                                className="text-sm font-medium"
+                                style={{
+                                    fontFamily: "Inter",
+                                    color:
+                                        themeMode === "dark"
+                                            ? colors.primary
+                                            : colors.onSurfaceVariant,
+                                }}
+                            >
+                                Oscuro
+                            </Text>
+                        </Pressable>
+                    </View>
+
+                    {/* Color primario */}
+                    <Text
+                        className="text-sm font-medium mb-2"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurface,
+                        }}
+                    >
+                        Color primario
+                    </Text>
+                    <View className="flex-row justify-between mb-5">
+                        {ACCENT_OPTIONS.map((name) => (
+                            <ColorCircle
+                                key={name}
+                                color={ACCENT_COLORS[name]}
+                                selected={primaryAccent === name}
+                                onPress={() => setPrimaryAccent(name)}
+                            />
+                        ))}
+                    </View>
+
+                    {/* Color secundario */}
+                    <Text
+                        className="text-sm font-medium mb-2"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurface,
+                        }}
+                    >
+                        Color secundario
+                    </Text>
+                    <View className="flex-row justify-between">
+                        {ACCENT_OPTIONS.map((name) => (
+                            <ColorCircle
+                                key={name}
+                                color={ACCENT_COLORS[name]}
+                                selected={secondaryAccent === name}
+                                onPress={() => setSecondaryAccent(name)}
+                            />
+                        ))}
+                    </View>
+                </GlassPanel>
+
+                {/* ════════════════════════════════════════════════════════════ */}
+                {/* ── Fiscal ── */}
+                {/* ════════════════════════════════════════════════════════════ */}
+                <GlassPanel>
+                    <SectionHeader icon={Wallet} label="Fiscal" />
+
+                    {/* Presupuesto Mensual */}
+                    <Text
+                        className="text-sm font-medium mb-2"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurface,
+                        }}
+                    >
+                        Presupuesto Mensual
+                    </Text>
+                    <View className="flex-row items-baseline gap-2 mb-5">
+                        <TextInput
+                            className="text-4xl font-bold"
+                            style={{
+                                fontFamily: "Geist",
+                                color: colors.onSurface,
+                                minWidth: 140,
+                            }}
+                            keyboardType="decimal-pad"
+                            value={budgetValue}
+                            onChangeText={setBudgetValue}
+                            placeholder="0.00"
+                            placeholderTextColor="rgba(221,228,225,0.3)"
+                        />
+                        <Text
+                            className="text-base font-semibold"
+                            style={{
+                                fontFamily: "Inter",
+                                color: colors.onSurfaceVariant,
+                            }}
+                        >
+                            USDT
+                        </Text>
+                    </View>
+
+                    {/* Periodo */}
+                    <Text
+                        className="text-sm font-medium mb-2"
+                        style={{
+                            fontFamily: "Inter",
+                            color: colors.onSurface,
+                        }}
+                    >
+                        Periodo
+                    </Text>
                     <View className="flex-row gap-3">
                         {/* Month selector */}
                         <View className="flex-1 relative">
@@ -195,7 +556,10 @@ export default function SettingsScreen() {
                                 >
                                     {MONTHS[selectedMonth]}
                                 </Text>
-                                <ChevronDown size={16} color={colors.outline} />
+                                <ChevronDown
+                                    size={16}
+                                    color={colors.outline}
+                                />
                             </Pressable>
                             {showMonthPicker && (
                                 <View
@@ -204,7 +568,8 @@ export default function SettingsScreen() {
                                         backgroundColor:
                                             colors.surfaceContainer,
                                         borderWidth: 1,
-                                        borderColor: colors.glassBorderStrong,
+                                        borderColor:
+                                            colors.glassBorderStrong,
                                     }}
                                 >
                                     <ScrollView
@@ -268,7 +633,10 @@ export default function SettingsScreen() {
                                 >
                                     {selectedYear}
                                 </Text>
-                                <ChevronDown size={16} color={colors.outline} />
+                                <ChevronDown
+                                    size={16}
+                                    color={colors.outline}
+                                />
                             </Pressable>
                             {showYearPicker && (
                                 <View
@@ -277,7 +645,8 @@ export default function SettingsScreen() {
                                         backgroundColor:
                                             colors.surfaceContainer,
                                         borderWidth: 1,
-                                        borderColor: colors.glassBorderStrong,
+                                        borderColor:
+                                            colors.glassBorderStrong,
                                     }}
                                 >
                                     {YEARS.map((y) => (
@@ -315,67 +684,415 @@ export default function SettingsScreen() {
                     </View>
                 </GlassPanel>
 
-                {/* ── Tema ── */}
-                <GlassPanel>
-                    <SectionHeader icon={Palette} label="Tema" />
-                    <View
-                        className="flex-row rounded-xl overflow-hidden"
+                {/* ════════════════════════════════════════════════════════════ */}
+                {/* ── Tasas (por mes) ── */}
+                {/* ════════════════════════════════════════════════════════════ */}
+                <CollapsiblePanel
+                    icon={ArrowLeftRight}
+                    label="Tasas (por mes)"
+                >
+                    <Text
+                        className="text-xs mb-4"
                         style={{
-                            backgroundColor: colors.glassBorder,
-                            borderWidth: 1,
-                            borderColor: colors.glassBorder,
+                            fontFamily: "Inter",
+                            color: colors.outline,
                         }}
                     >
-                        <Pressable
-                            className="flex-1 py-3 items-center"
-                            style={{
-                                backgroundColor:
-                                    themeMode === "light"
-                                        ? `${colors.primary}1A`
-                                        : "transparent",
-                            }}
-                            onPress={() => setThemeMode("light")}
-                        >
-                            <Text
-                                className="text-sm font-medium"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color:
-                                        themeMode === "light"
-                                            ? colors.primary
-                                            : colors.onSurfaceVariant,
-                                }}
-                            >
-                                Claro
-                            </Text>
-                        </Pressable>
-                        <Pressable
-                            className="flex-1 py-3 items-center"
-                            style={{
-                                backgroundColor:
-                                    themeMode === "dark"
-                                        ? `${colors.primary}1A`
-                                        : "transparent",
-                            }}
-                            onPress={() => setThemeMode("dark")}
-                        >
-                            <Text
-                                className="text-sm font-medium"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color:
-                                        themeMode === "dark"
-                                            ? colors.primary
-                                            : colors.onSurfaceVariant,
-                                }}
-                            >
-                                Oscuro
-                            </Text>
-                        </Pressable>
-                    </View>
-                </GlassPanel>
+                        Configura las tasas de cambio para cada mes del año{" "}
+                        {selectedYear}.
+                    </Text>
 
-                {/* ── Secciones ocultas ── */}
+                    {yearMonths.map(({ index, key }) => {
+                        const isExpanded = expandedMonths.has(key);
+                        const rates = getInputRates(key);
+                        const p2p = parseFloat(rates.p2p) || 0;
+                        const bcvUsd = parseFloat(rates.bcvUsd) || 0;
+                        const bcvEur = parseFloat(rates.bcvEur) || 0;
+                        const budget = parseFloat(budgetValue) || 0;
+
+                        return (
+                            <View
+                                key={key}
+                                className="mb-3 rounded-xl overflow-hidden"
+                                style={{
+                                    borderWidth: 1,
+                                    borderColor: colors.glassBorder,
+                                }}
+                            >
+                                {/* Month header */}
+                                <Pressable
+                                    className="flex-row items-center justify-between px-4 py-3"
+                                    style={{
+                                        backgroundColor:
+                                            colors.glassSurface,
+                                    }}
+                                    onPress={() => toggleMonth(key)}
+                                >
+                                    <Text
+                                        className="text-sm font-semibold"
+                                        style={{
+                                            fontFamily: "Inter",
+                                            color: colors.onSurface,
+                                        }}
+                                    >
+                                        {MONTHS[index]} {selectedYear}
+                                    </Text>
+                                    {isExpanded ? (
+                                        <ChevronDown
+                                            size={16}
+                                            color={colors.outline}
+                                        />
+                                    ) : (
+                                        <ChevronRight
+                                            size={16}
+                                            color={colors.outline}
+                                        />
+                                    )}
+                                </Pressable>
+
+                                {/* Expanded content */}
+                                {isExpanded && (
+                                    <View className="p-4 gap-4">
+                                        {/* Tasas de Cambio */}
+                                        <View>
+                                            <Text
+                                                className="text-xs font-semibold uppercase tracking-widest mb-2"
+                                                style={{
+                                                    fontFamily: "Inter",
+                                                    color: colors
+                                                        .onSurfaceVariant,
+                                                }}
+                                            >
+                                                Tasas de Cambio
+                                            </Text>
+                                            <View className="gap-2">
+                                                {/* Dólar P2P */}
+                                                <View
+                                                    className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                                                    style={{
+                                                        backgroundColor:
+                                                            colors.glassSurface,
+                                                        borderWidth: 1,
+                                                        borderColor: `${colors.primary}33`,
+                                                        borderLeftWidth: 3,
+                                                        borderLeftColor: `${colors.primary}66`,
+                                                    }}
+                                                >
+                                                    <View className="flex-1">
+                                                        <Text
+                                                            className="text-sm font-medium"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .onSurface,
+                                                            }}
+                                                        >
+                                                            Dólar P2P (Bs.)
+                                                        </Text>
+                                                        <Text
+                                                            className="text-xs"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .outline,
+                                                            }}
+                                                        >
+                                                            Referencia Binance
+                                                        </Text>
+                                                    </View>
+                                                    <TextInput
+                                                        className="text-right text-sm font-medium"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .onSurface,
+                                                            width: 80,
+                                                        }}
+                                                        keyboardType="decimal-pad"
+                                                        value={rates.p2p}
+                                                        onChangeText={(v) =>
+                                                            updateRate(
+                                                                key,
+                                                                "p2p",
+                                                                v,
+                                                            )
+                                                        }
+                                                        placeholder="0.00"
+                                                        placeholderTextColor={
+                                                            colors.outline
+                                                        }
+                                                    />
+                                                </View>
+
+                                                {/* Dólar BCV */}
+                                                <View
+                                                    className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                                                    style={{
+                                                        backgroundColor:
+                                                            colors.glassSurface,
+                                                        borderWidth: 1,
+                                                        borderColor:
+                                                            colors.glassBorder,
+                                                    }}
+                                                >
+                                                    <View className="flex-1">
+                                                        <Text
+                                                            className="text-sm font-medium"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .onSurface,
+                                                            }}
+                                                        >
+                                                            Dólar BCV (Bs.)
+                                                        </Text>
+                                                        <Text
+                                                            className="text-xs"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .outline,
+                                                            }}
+                                                        >
+                                                            Oficial BCV
+                                                        </Text>
+                                                    </View>
+                                                    <TextInput
+                                                        className="text-right text-sm font-medium"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .onSurface,
+                                                            width: 80,
+                                                        }}
+                                                        keyboardType="decimal-pad"
+                                                        value={rates.bcvUsd}
+                                                        onChangeText={(v) =>
+                                                            updateRate(
+                                                                key,
+                                                                "bcvUsd",
+                                                                v,
+                                                            )
+                                                        }
+                                                        placeholder="0.00"
+                                                        placeholderTextColor={
+                                                            colors.outline
+                                                        }
+                                                    />
+                                                </View>
+
+                                                {/* Euro BCV */}
+                                                <View
+                                                    className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                                                    style={{
+                                                        backgroundColor:
+                                                            colors.glassSurface,
+                                                        borderWidth: 1,
+                                                        borderColor:
+                                                            colors.glassBorder,
+                                                    }}
+                                                >
+                                                    <View className="flex-1">
+                                                        <Text
+                                                            className="text-sm font-medium"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .onSurface,
+                                                            }}
+                                                        >
+                                                            Euro BCV (Bs.)
+                                                        </Text>
+                                                        <Text
+                                                            className="text-xs"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Inter",
+                                                                color: colors
+                                                                    .outline,
+                                                            }}
+                                                        >
+                                                            Oficial BCV
+                                                        </Text>
+                                                    </View>
+                                                    <TextInput
+                                                        className="text-right text-sm font-medium"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .onSurface,
+                                                            width: 80,
+                                                        }}
+                                                        keyboardType="decimal-pad"
+                                                        value={rates.bcvEur}
+                                                        onChangeText={(v) =>
+                                                            updateRate(
+                                                                key,
+                                                                "bcvEur",
+                                                                v,
+                                                            )
+                                                        }
+                                                        placeholder="0.00"
+                                                        placeholderTextColor={
+                                                            colors.outline
+                                                        }
+                                                    />
+                                                </View>
+                                            </View>
+                                        </View>
+
+                                        {/* Resumen de Conversión */}
+                                        <View
+                                            className="rounded-xl p-4"
+                                            style={{
+                                                backgroundColor:
+                                                    colors.glassOverlay,
+                                                borderWidth: 1,
+                                                borderColor:
+                                                    colors.glassBorderStrong,
+                                            }}
+                                        >
+                                            <Text
+                                                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                                                style={{
+                                                    fontFamily: "Inter",
+                                                    color: colors
+                                                        .onSurfaceVariant,
+                                                }}
+                                            >
+                                                Resumen de Conversión
+                                            </Text>
+                                            <View className="gap-0">
+                                                <View
+                                                    className="flex-row justify-between items-center py-2"
+                                                    style={{
+                                                        borderBottomWidth: 1,
+                                                        borderBottomColor:
+                                                            colors.glassBorder,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        className="text-sm"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Inter",
+                                                            color: colors
+                                                                .onSurfaceVariant,
+                                                        }}
+                                                    >
+                                                        Bolívares (P2P)
+                                                    </Text>
+                                                    <Text
+                                                        className="text-sm font-semibold"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .onSurface,
+                                                        }}
+                                                    >
+                                                        {(budget * p2p).toLocaleString(
+                                                            "es-VE",
+                                                            {
+                                                                minimumFractionDigits: 2,
+                                                            },
+                                                        )}{" "}
+                                                        Bs.
+                                                    </Text>
+                                                </View>
+                                                <View
+                                                    className="flex-row justify-between items-center py-2"
+                                                    style={{
+                                                        borderBottomWidth: 1,
+                                                        borderBottomColor:
+                                                            colors.glassBorder,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        className="text-sm"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Inter",
+                                                            color: colors
+                                                                .onSurfaceVariant,
+                                                        }}
+                                                    >
+                                                        Dólares (BCV)
+                                                    </Text>
+                                                    <Text
+                                                        className="text-sm font-semibold"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .primary,
+                                                        }}
+                                                    >
+                                                        {(bcvUsd > 0
+                                                            ? (budget * p2p) / bcvUsd
+                                                            : 0
+                                                        ).toLocaleString(
+                                                            "en-US",
+                                                            {
+                                                                minimumFractionDigits: 2,
+                                                            },
+                                                        )}{" "}
+                                                        $
+                                                    </Text>
+                                                </View>
+                                                <View className="flex-row justify-between items-center py-2">
+                                                    <Text
+                                                        className="text-sm"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Inter",
+                                                            color: colors
+                                                                .onSurfaceVariant,
+                                                        }}
+                                                    >
+                                                        Euros (BCV)
+                                                    </Text>
+                                                    <Text
+                                                        className="text-sm font-semibold"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Geist",
+                                                            color: colors
+                                                                .onSurface,
+                                                        }}
+                                                    >
+                                                        {(bcvEur > 0
+                                                            ? (budget * p2p) / bcvEur
+                                                            : 0
+                                                        ).toLocaleString(
+                                                            "de-DE",
+                                                            {
+                                                                minimumFractionDigits: 2,
+                                                            },
+                                                        )}{" "}
+                                                        €
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })}
+                </CollapsiblePanel>
+
+                {/* ════════════════════════════════════════════════════════════ */}
+                {/* ── Secciones Visibles ── */}
+                {/* ════════════════════════════════════════════════════════════ */}
                 <GlassPanel>
                     <SectionHeader icon={Eye} label="Secciones Visibles" />
                     <View className="gap-3">
@@ -475,273 +1192,6 @@ export default function SettingsScreen() {
                     </View>
                 </GlassPanel>
 
-                {/* ── Presupuesto Mensual ── */}
-                <GlassPanel>
-                    <SectionHeader icon={Wallet} label="Presupuesto Mensual" />
-                    <View className="items-center py-4">
-                        <View className="flex-row items-baseline gap-2">
-                            <TextInput
-                                className="text-4xl font-bold text-center"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                    minWidth: 120,
-                                }}
-                                keyboardType="decimal-pad"
-                                value={budgetValue}
-                                onChangeText={setBudgetValue}
-                                placeholder="0.00"
-                                placeholderTextColor="rgba(221,228,225,0.3)"
-                            />
-                            <Text
-                                className="text-base font-semibold"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color: colors.onSurfaceVariant,
-                                }}
-                            >
-                                USDT
-                            </Text>
-                        </View>
-                    </View>
-                </GlassPanel>
-
-                {/* ── Tasas de Cambio ── */}
-                <GlassPanel>
-                    <SectionHeader
-                        icon={ArrowLeftRight}
-                        label="Tasas de Cambio"
-                    />
-                    <View className="gap-3">
-                        {/* Dólar P2P */}
-                        <View
-                            className="flex-row items-center justify-between rounded-xl px-4 py-3"
-                            style={{
-                                backgroundColor: colors.glassSurface,
-                                borderWidth: 1,
-                                borderColor: `${colors.primary}33`,
-                                borderLeftWidth: 3,
-                                borderLeftColor: `${colors.primary}66`,
-                            }}
-                        >
-                            <View className="flex-1">
-                                <Text
-                                    className="text-sm font-medium"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.onSurface,
-                                    }}
-                                >
-                                    Dólar P2P (Bs.)
-                                </Text>
-                                <Text
-                                    className="text-xs"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.outline,
-                                    }}
-                                >
-                                    Referencia Binance
-                                </Text>
-                            </View>
-                            <TextInput
-                                className="text-right text-sm font-medium"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                    width: 80,
-                                }}
-                                keyboardType="decimal-pad"
-                                value={p2pRate}
-                                onChangeText={setP2pRate}
-                            />
-                        </View>
-
-                        {/* Dólar BCV */}
-                        <View
-                            className="flex-row items-center justify-between rounded-xl px-4 py-3"
-                            style={{
-                                backgroundColor: colors.glassSurface,
-                                borderWidth: 1,
-                                borderColor: colors.glassBorder,
-                            }}
-                        >
-                            <View className="flex-1">
-                                <Text
-                                    className="text-sm font-medium"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.onSurface,
-                                    }}
-                                >
-                                    Dólar BCV (Bs.)
-                                </Text>
-                                <Text
-                                    className="text-xs"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.outline,
-                                    }}
-                                >
-                                    Oficial BCV
-                                </Text>
-                            </View>
-                            <TextInput
-                                className="text-right text-sm font-medium"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                    width: 80,
-                                }}
-                                keyboardType="decimal-pad"
-                                value={bcvUsdRate}
-                                onChangeText={setBcvUsdRate}
-                            />
-                        </View>
-
-                        {/* Euro BCV */}
-                        <View
-                            className="flex-row items-center justify-between rounded-xl px-4 py-3"
-                            style={{
-                                backgroundColor: colors.glassSurface,
-                                borderWidth: 1,
-                                borderColor: colors.glassBorder,
-                            }}
-                        >
-                            <View className="flex-1">
-                                <Text
-                                    className="text-sm font-medium"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.onSurface,
-                                    }}
-                                >
-                                    Euro BCV (Bs.)
-                                </Text>
-                                <Text
-                                    className="text-xs"
-                                    style={{
-                                        fontFamily: "Inter",
-                                        color: colors.outline,
-                                    }}
-                                >
-                                    Oficial BCV
-                                </Text>
-                            </View>
-                            <TextInput
-                                className="text-right text-sm font-medium"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                    width: 80,
-                                }}
-                                keyboardType="decimal-pad"
-                                value={bcvEurRate}
-                                onChangeText={setBcvEurRate}
-                            />
-                        </View>
-                    </View>
-                </GlassPanel>
-
-                {/* ── Resumen de Conversión ── */}
-                <GlassPanel heavy>
-                    <SectionHeader
-                        icon={ChartBar}
-                        label="Resumen de Conversión"
-                    />
-                    <View className="gap-0">
-                        {/* Bolívares P2P */}
-                        <View
-                            className="flex-row justify-between items-center py-3"
-                            style={{
-                                borderBottomWidth: 1,
-                                borderBottomColor: colors.glassBorder,
-                            }}
-                        >
-                            <Text
-                                className="text-sm"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color: colors.onSurfaceVariant,
-                                }}
-                            >
-                                Bolívares (P2P)
-                            </Text>
-                            <Text
-                                className="text-sm font-semibold"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                }}
-                            >
-                                {conversionSummary.bolivaresP2P.toLocaleString(
-                                    "es-VE",
-                                    { minimumFractionDigits: 2 },
-                                )}{" "}
-                                Bs.
-                            </Text>
-                        </View>
-
-                        {/* Dólares BCV */}
-                        <View
-                            className="flex-row justify-between items-center py-3"
-                            style={{
-                                borderBottomWidth: 1,
-                                borderBottomColor: colors.glassBorder,
-                            }}
-                        >
-                            <Text
-                                className="text-sm"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color: colors.onSurfaceVariant,
-                                }}
-                            >
-                                Dólares (BCV)
-                            </Text>
-                            <Text
-                                className="text-sm font-semibold"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.primary,
-                                }}
-                            >
-                                {conversionSummary.dolaresBCV.toLocaleString(
-                                    "en-US",
-                                    { minimumFractionDigits: 2 },
-                                )}{" "}
-                                $
-                            </Text>
-                        </View>
-
-                        {/* Euros BCV */}
-                        <View className="flex-row justify-between items-center py-3">
-                            <Text
-                                className="text-sm"
-                                style={{
-                                    fontFamily: "Inter",
-                                    color: colors.onSurfaceVariant,
-                                }}
-                            >
-                                Euros (BCV)
-                            </Text>
-                            <Text
-                                className="text-sm font-semibold"
-                                style={{
-                                    fontFamily: "Geist",
-                                    color: colors.onSurface,
-                                }}
-                            >
-                                {conversionSummary.eurosBCV.toLocaleString(
-                                    "de-DE",
-                                    { minimumFractionDigits: 2 },
-                                )}{" "}
-                                €
-                            </Text>
-                        </View>
-                    </View>
-                </GlassPanel>
-
                 {/* ── Guardar Configuración ── */}
                 <Pressable
                     className="py-4 rounded-full items-center"
@@ -753,9 +1203,7 @@ export default function SettingsScreen() {
                         shadowRadius: 20,
                         elevation: 8,
                     }}
-                    onPress={() => {
-                        showSuccessToast("Configuración guardada");
-                    }}
+                    onPress={handleSave}
                 >
                     <View className="flex-row items-center gap-2">
                         <Save size={18} color={colors.onPrimary} />
@@ -791,7 +1239,6 @@ export default function SettingsScreen() {
                                     onPress: async () => {
                                         try {
                                             await resetDatabase();
-                                            // Reload all stores
                                             await Promise.all([
                                                 useCategoryStore
                                                     .getState()

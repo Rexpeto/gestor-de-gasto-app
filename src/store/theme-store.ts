@@ -3,6 +3,26 @@ import { create } from 'zustand';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export type AccentColorName = 'blue' | 'pink' | 'purple' | 'green' | 'cyan' | 'orange';
+
+export const ACCENT_COLORS: Record<AccentColorName, string> = {
+  blue: '#3b82f6',
+  pink: '#ec4899',
+  purple: '#8b5cf6',
+  green: '#22c55e',
+  cyan: '#06b6d4',
+  orange: '#f97316',
+};
+
+export const ACCENT_COLOR_NAMES: Record<AccentColorName, string> = {
+  blue: 'Azul',
+  pink: 'Rosado',
+  purple: 'Morado',
+  green: 'Verde',
+  cyan: 'Cyan',
+  orange: 'Naranja',
+};
+
 export interface ThemeColors {
   background: string;
   onBackground: string;
@@ -93,11 +113,19 @@ export const lightColors: ThemeColors = {
 interface ThemeState {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
+  primaryAccent: AccentColorName;
+  setPrimaryAccent: (color: AccentColorName) => void;
+  secondaryAccent: AccentColorName;
+  setSecondaryAccent: (color: AccentColorName) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
   mode: 'system',
   setMode: (mode: ThemeMode) => set({ mode }),
+  primaryAccent: 'cyan',
+  setPrimaryAccent: (color) => set({ primaryAccent: color }),
+  secondaryAccent: 'purple',
+  setSecondaryAccent: (color) => set({ secondaryAccent: color }),
 }));
 
 /**

@@ -1,6 +1,11 @@
 import * as SQLite from 'expo-sqlite';
 
-import type { Category, Transaction, TransactionType } from '@/types';
+import type {
+    Category,
+    MonthlyRates,
+    Transaction,
+    TransactionType,
+} from '@/types';
 
 const DB_NAME = 'gestor-gastos.db';
 
@@ -83,6 +88,43 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     await migrateEmojiToLucideIconsV3(database);
     await database.runAsync(
       'INSERT OR REPLACE INTO _migrations (version) VALUES (3)'
+    );
+  }
+
+  // Migration v4: monthly exchange rates table
+  const currentVersionV4 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV4?.version || currentVersionV4.version < 4) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS monthly_rates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        p2p_rate REAL NOT NULL DEFAULT 0,
+        bcv_usd_rate REAL NOT NULL DEFAULT 0,
+        bcv_eur_rate REAL NOT NULL DEFAULT 0,
+        UNIQUE(month, year)
+      )
+    `);
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (4)'
+    );
+  }
+
+  // Migration v5: persistent key-value settings (monthlyBudget, etc.)
+  const currentVersionV5 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV5?.version || currentVersionV5.version < 5) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      )
+    `);
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (5)'
     );
   }
 }
@@ -516,6 +558,88 @@ export async function deleteCategory(id: number): Promise<void> {
   await database.runAsync('DELETE FROM categories WHERE id = ?', id);
 }
 
+// ─── Monthly Rates ─────────────────────────────────────────────
+
+export async function getMonthlyRates(
+    month: number,
+    year: number,
+): Promise<MonthlyRates | null> {
+    const database = await getDatabase();
+    const row = await database.getFirstAsync<{
+        p2p_rate: number;
+        bcv_usd_rate: number;
+        bcv_eur_rate: number;
+    }>(
+        'SELECT p2p_rate, bcv_usd_rate, bcv_eur_rate FROM monthly_rates WHERE month = ? AND year = ?',
+        [month, year],
+    );
+
+    if (!row) return null;
+
+    return {
+        month,
+        year,
+        p2pRate: row.p2p_rate,
+        bcvUsdRate: row.bcv_usd_rate,
+        bcvEurRate: row.bcv_eur_rate,
+    };
+}
+
+export async function upsertMonthlyRates(
+    month: number,
+    year: number,
+    rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number },
+): Promise<void> {
+    const database = await getDatabase();
+    await database.runAsync(
+        `INSERT INTO monthly_rates (month, year, p2p_rate, bcv_usd_rate, bcv_eur_rate)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(month, year) DO UPDATE SET
+           p2p_rate = excluded.p2p_rate,
+           bcv_usd_rate = excluded.bcv_usd_rate,
+           bcv_eur_rate = excluded.bcv_eur_rate`,
+        [month, year, rates.p2pRate, rates.bcvUsdRate, rates.bcvEurRate],
+    );
+}
+
+export async function getAllMonthlyRates(): Promise<MonthlyRates[]> {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<{
+        month: number;
+        year: number;
+        p2p_rate: number;
+        bcv_usd_rate: number;
+        bcv_eur_rate: number;
+    }>('SELECT * FROM monthly_rates ORDER BY year DESC, month DESC');
+
+    return rows.map((r) => ({
+        month: r.month,
+        year: r.year,
+        p2pRate: r.p2p_rate,
+        bcvUsdRate: r.bcv_usd_rate,
+        bcvEurRate: r.bcv_eur_rate,
+    }));
+}
+
+// ─── Settings ─────────────────────────────────────────────────
+
+export async function getSetting(key: string): Promise<string | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ value: string }>(
+    'SELECT value FROM settings WHERE key = ?',
+    [key],
+  );
+  return row?.value ?? null;
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+    [key, value],
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────
 
 function mapTransaction(row: {
@@ -554,6 +678,8 @@ export async function resetDatabase(): Promise<void> {
   await database.execAsync(`
     DROP TABLE IF EXISTS transactions;
     DROP TABLE IF EXISTS categories;
+    DROP TABLE IF EXISTS monthly_rates;
+    DROP TABLE IF EXISTS settings;
     DROP TABLE IF EXISTS _migrations;
   `);
 
@@ -582,6 +708,21 @@ export async function resetDatabase(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
+
+    CREATE TABLE IF NOT EXISTS monthly_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      p2p_rate REAL NOT NULL DEFAULT 0,
+      bcv_usd_rate REAL NOT NULL DEFAULT 0,
+      bcv_eur_rate REAL NOT NULL DEFAULT 0,
+      UNIQUE(month, year)
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );
   `);
 
   // Seed categories from scratch (includes curated income categories)

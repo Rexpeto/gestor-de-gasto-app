@@ -14,6 +14,9 @@ import ToastMessage from 'react-native-toast-message';
 import { HeroUINativeProvider } from 'heroui-native/provider';
 import { AddTransactionSheet } from '@/components/AddTransactionSheet';
 import { toastConfig } from '@/components/ThemedToast';
+
+import { useRateStore } from '@/store/rate-store';
+import { usePreferencesStore } from '@/store/preferences-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors, useThemeStore } from '@/store/theme-store';
@@ -36,6 +39,8 @@ export default function RootLayout() {
   const loadMonthlySummary = useTransactionStore((s) => s.loadMonthlySummary);
   const loadCategorySummaries = useTransactionStore((s) => s.loadCategorySummaries);
   const loadCategories = useCategoryStore((s) => s.loadCategories);
+  const loadRates = useRateStore((s) => s.loadRates);
+  const loadPreferences = usePreferencesStore((s) => s.loadPreferences);
   const sheetIsOpen = useSheetStore((s) => s.isOpen);
   const sheetType = useSheetStore((s) => s.type);
   const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -56,6 +61,8 @@ export default function RootLayout() {
           loadTransactions(),
           loadMonthlySummary(),
           loadCategorySummaries(),
+          loadRates(),
+          loadPreferences(),
         ]);
       } catch (e) {
         console.warn('Error loading initial data:', e);

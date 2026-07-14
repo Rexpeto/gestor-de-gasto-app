@@ -6,6 +6,8 @@ import { Action } from "@/components/Action";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CreditCard } from "@/components/CreditCard";
 import { useCategoryStore } from "@/store/category-store";
+import { usePreferencesStore } from "@/store/preferences-store";
+import { useRateStore } from "@/store/rate-store";
 import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
@@ -112,9 +114,29 @@ export default function DashboardScreen() {
     const categories = useCategoryStore((s) => s.categories);
     const isLoading = useTransactionStore((s) => s.isLoading);
 
-    const balance = monthlySummary?.balance ?? 0;
+    const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
+    console.log('[dashboard] monthlyBudget:', monthlyBudget);
+    console.log('[dashboard] netBalance:', monthlySummary?.balance);
+    console.log('[dashboard] displayBalance:', monthlyBudget + (monthlySummary?.balance ?? 0));
+    const netBalance = monthlySummary?.balance ?? 0;
     const totalIncome = monthlySummary?.totalIncome ?? 0;
     const totalExpense = monthlySummary?.totalExpense ?? 0;
+
+    // Available = monthly budget + income - expense
+    const displayBalance = monthlyBudget + netBalance;
+
+    // ── USDT → USD/EUR conversion (reactive via ratesByMonth) ──
+    const convert = useRateStore((s) => s.convert);
+    const ratesByMonth = useRateStore((s) => s.ratesByMonth);
+
+    const { balanceUsd, balanceEur } = useMemo(() => {
+        if (!monthlySummary) return { balanceUsd: 0, balanceEur: 0 };
+        const [yearStr, monthStr] = monthlySummary.month.split("-");
+        const month = parseInt(monthStr, 10) - 1;
+        const year = parseInt(yearStr, 10);
+        const result = convert(displayBalance, month, year);
+        return { balanceUsd: result.usd, balanceEur: result.eur };
+    }, [displayBalance, monthlySummary, convert, ratesByMonth]);
 
     const getCategoryInfo = useCallback(
         (categoryId: number) => categories.find((c) => c.id === categoryId),
@@ -145,9 +167,11 @@ export default function DashboardScreen() {
                 {/* ── Hero Balance Card ── */}
                 <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
                     <CreditCard
-                        balance={balance}
+                        balance={displayBalance}
                         totalIncome={totalIncome}
                         totalExpense={totalExpense}
+                        balanceUsd={balanceUsd}
+                        balanceEur={balanceEur}
                     />
                 </View>
 

@@ -41,3 +41,19 @@ export interface CategorySummary {
   total: number;
   percentage: number;
 }
+
+// ─── Exchange Rates ─────────────────────────────────────────────
+
+export interface MonthlyRates {
+  month: number; // 0-11
+  year: number;
+  p2pRate: number;   // Bs per USDT
+  bcvUsdRate: number; // Bs per USD
+  bcvEurRate: number; // Bs per EUR
+}
+
+export interface ConversionResult {
+  bs: number;  // Bolívares (P2P)
+  usd: number; // Dólares (BCV)
+  eur: number; // Euros (BCV)
+}
