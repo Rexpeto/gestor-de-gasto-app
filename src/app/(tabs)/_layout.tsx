@@ -14,8 +14,7 @@ export default function TabLayout() {
         <Tabs
             screenOptions={{
                 headerShown: false,
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.onSurfaceVariant,
+                // tint colors los maneja ThemeProvider desde _layout.tsx
                 tabBarStyle: {
                     backgroundColor: colors.glassOverlay,
                     borderTopWidth: 1,
@@ -42,11 +41,8 @@ export default function TabLayout() {
                 name="index"
                 options={{
                     title: "Inicio",
-                    tabBarIcon: ({ color, focused }) => (
-                        <LayoutDashboard
-                            size={22}
-                            color={focused ? colors.primary : color}
-                        />
+                    tabBarIcon: ({ color }) => (
+                        <LayoutDashboard size={22} color={color} />
                     ),
                 }}
             />
@@ -54,11 +50,8 @@ export default function TabLayout() {
                 name="transactions"
                 options={{
                     title: "Historial",
-                    tabBarIcon: ({ color, focused }) => (
-                        <Receipt
-                            size={22}
-                            color={focused ? colors.primary : color}
-                        />
+                    tabBarIcon: ({ color }) => (
+                        <Receipt size={22} color={color} />
                     ),
                 }}
             />
@@ -66,11 +59,8 @@ export default function TabLayout() {
                 name="stats"
                 options={{
                     title: "Estadísticas",
-                    tabBarIcon: ({ color, focused }) => (
-                        <ChartBarBig
-                            size={22}
-                            color={focused ? colors.primary : color}
-                        />
+                    tabBarIcon: ({ color }) => (
+                        <ChartBarBig size={22} color={color} />
                     ),
                 }}
             />
@@ -78,11 +68,8 @@ export default function TabLayout() {
                 name="settings"
                 options={{
                     title: "Ajustes",
-                    tabBarIcon: ({ color, focused }) => (
-                        <SlidersHorizontal
-                            size={22}
-                            color={focused ? colors.primary : color}
-                        />
+                    tabBarIcon: ({ color }) => (
+                        <SlidersHorizontal size={22} color={color} />
                     ),
                 }}
             />

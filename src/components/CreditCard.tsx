@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TrendingDown, TrendingUp } from 'lucide-react-native/icons';
 
+import { usePreferencesStore } from '@/store/preferences-store';
 import { useRateStore } from '@/store/rate-store';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
@@ -54,7 +55,8 @@ export function CreditCard({
   const getRates = useRateStore((s) => s.getRates);
   const showConversion = balance > 0;
 
-  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('USDT');
+  const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
+  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>(budgetCurrency);
 
   // Parse current month/year from monthlySummary (format: "YYYY-MM")
   const now = new Date();
@@ -132,8 +134,8 @@ export function CreditCard({
   return (
     <LinearGradient
       colors={[
-        `${colors.primary}1A`,
-        `${colors.primary}0A`,
+        `${colors.primary}33`,
+        `${colors.primary}14`,
         colors.glassSurface,
       ]}
       start={{ x: 0, y: 0 }}
@@ -156,7 +158,7 @@ export function CreditCard({
           width: 120,
           height: 120,
           borderRadius: 9999,
-          backgroundColor: `${colors.primary}26`,
+          backgroundColor: `${colors.primary}4d`,
         }}
       />
       <View
@@ -167,7 +169,7 @@ export function CreditCard({
           width: 100,
           height: 100,
           borderRadius: 9999,
-          backgroundColor: `${colors.primary}14`,
+          backgroundColor: `${colors.primary}33`,
         }}
       />
 

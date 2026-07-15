@@ -39,7 +39,7 @@ function ThemedToastContent({ text1, text2, type }: ThemedToastProps) {
         backgroundColor: colors.surfaceContainerHighest,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: isError ? `${colors.error}4D` : `${colors.primary}33`,
+        borderColor: isError ? `${colors.error}66` : `${colors.primary}4d`,
         borderLeftWidth: 4,
         borderLeftColor: isError ? colors.error : colors.primary,
         padding: 16,

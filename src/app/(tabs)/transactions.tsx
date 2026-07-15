@@ -159,7 +159,7 @@ export default function TransactionsScreen() {
                                             borderColor: "#3c4a46",
                                             ...(active
                                                 ? {
-                                                      shadowColor: "#57f1db",
+                                                      shadowColor: colors.primary,
                                                       shadowOffset: {
                                                           width: 0,
                                                           height: 4,
@@ -260,7 +260,7 @@ export default function TransactionsScreen() {
                                                     borderBottomColor:
                                                         colors.glassBorder,
                                                     backgroundColor: pressed
-                                                        ? `${colors.primary}0D`
+                                                        ? `${colors.primary}1A`
                                                         : "transparent",
                                                 })}
                                             >
@@ -272,7 +272,7 @@ export default function TransactionsScreen() {
                                                         backgroundColor:
                                                             cat?.color
                                                                 ? `${cat.color}20`
-                                                                : `${colors.primary}1A`,
+                                                                : `${colors.primary}33`,
                                                         alignItems: "center",
                                                         justifyContent:
                                                             "center",

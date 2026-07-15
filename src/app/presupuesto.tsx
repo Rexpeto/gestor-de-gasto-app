@@ -23,9 +23,9 @@ function EditableNumberInput({
     <View
       className="rounded-lg px-3 py-2 min-w-[90px]"
       style={{
-        backgroundColor: `${colors.primary}14`,
+        backgroundColor: `${colors.primary}33`,
         borderWidth: 1,
-        borderColor: `${colors.primary}33`,
+        borderColor: `${colors.primary}4d`,
       }}
     >
       <Text
@@ -159,7 +159,7 @@ export default function PresupuestoScreen() {
               {isOverBudget && (
                 <View
                   className="mt-3 rounded-xl p-3"
-                  style={{ backgroundColor: `${colors.danger}1F`, borderWidth: 1, borderColor: `${colors.danger}33` }}
+                  style={{ backgroundColor: `${colors.danger}4D`, borderWidth: 1, borderColor: `${colors.danger}4d` }}
                 >
                   <Text className="text-xs font-medium" style={{ fontFamily: 'Inter', color: colors.danger }}>
                     ⚠ Has superado tu presupuesto mensual
@@ -211,11 +211,11 @@ export default function PresupuestoScreen() {
                   className="rounded-2xl p-4 mb-2"
                   style={{
                     backgroundColor: !budget?.enabled && budget
-                      ? `${colors.glassSurface}4D`
+                      ? `${colors.glassSurface}66`
                       : colors.glassSurface,
                     borderWidth: 1,
                     borderColor: budget?.enabled
-                      ? over ? `${colors.danger}33` : colors.glassBorder
+                      ? over ? `${colors.danger}4d` : colors.glassBorder
                       : colors.glassBorder,
                     opacity: budget && !budget.enabled ? 0.5 : 1,
                   }}
@@ -275,7 +275,7 @@ export default function PresupuestoScreen() {
                         {budget && (
                           <Pressable
                             className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${colors.danger}1A` }}
+                            style={{ backgroundColor: `${colors.danger}33` }}
                             onPress={() => removeBudget(cat.id)}
                           >
                             <Trash2 size={16} color={colors.danger} />
@@ -286,8 +286,8 @@ export default function PresupuestoScreen() {
                             className="p-2 rounded-lg"
                             style={{
                               backgroundColor: budget.enabled
-                                ? `${colors.danger}1A`
-                                : `${colors.primary}1A`,
+                                ? `${colors.danger}33`
+                                : `${colors.primary}33`,
                             }}
                             onPress={() => toggleBudget(cat.id)}
                           >
@@ -348,7 +348,7 @@ export default function PresupuestoScreen() {
                 >
                   <View
                     className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-                    style={{ backgroundColor: `${colors.primary}1A` }}
+                    style={{ backgroundColor: `${colors.primary}33` }}
                   >
                     <Text className="text-base font-bold" style={{ fontFamily: 'Inter', color: colors.primary }}>
                       {rate.symbol}
@@ -364,7 +364,7 @@ export default function PresupuestoScreen() {
                   </View>
                   <View
                     className="rounded-lg px-3 py-1.5 min-w-[80px]"
-                    style={{ backgroundColor: `${colors.primary}14`, borderWidth: 1, borderColor: `${colors.primary}33` }}
+                    style={{ backgroundColor: `${colors.primary}33`, borderWidth: 1, borderColor: `${colors.primary}4d` }}
                   >
                     {/* Simple rate display */}
                     <Text className="text-xs font-semibold text-right" style={{ fontFamily: 'Inter', color: colors.primary }}>
@@ -416,7 +416,7 @@ export default function PresupuestoScreen() {
         <View className="mx-5 mt-2">
           <Pressable
             className="w-full py-3.5 rounded-full items-center flex-row justify-center gap-2"
-            style={{ backgroundColor: `${colors.primary}1F`, borderWidth: 1, borderColor: `${colors.primary}33` }}
+            style={{ backgroundColor: `${colors.primary}4D`, borderWidth: 1, borderColor: `${colors.primary}4d` }}
             onPress={() => router.back()}
           >
             <Text

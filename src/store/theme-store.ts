@@ -97,9 +97,9 @@ export const lightColors: ThemeColors = {
   primaryContainer: '#62fae3',
   onPrimaryContainer: '#00201c',
   secondary: '#adc6ff',
-  error: '#ffb4ab',
-  errorContainer: '#93000a',
-  onErrorContainer: '#ffdad6',
+  error: '#b91c1c',
+  errorContainer: '#fee2e2',
+  onErrorContainer: '#450a0a',
   success: '#22c55e',
   danger: '#ef4444',
   glassSurface: 'rgba(255, 255, 255, 0.7)',
@@ -115,8 +115,6 @@ interface ThemeState {
   setMode: (mode: ThemeMode) => void;
   primaryAccent: AccentColorName;
   setPrimaryAccent: (color: AccentColorName) => void;
-  secondaryAccent: AccentColorName;
-  setSecondaryAccent: (color: AccentColorName) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
@@ -124,20 +122,29 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setMode: (mode: ThemeMode) => set({ mode }),
   primaryAccent: 'cyan',
   setPrimaryAccent: (color) => set({ primaryAccent: color }),
-  secondaryAccent: 'purple',
-  setSecondaryAccent: (color) => set({ secondaryAccent: color }),
 }));
 
 /**
- * Hook que resuelve la paleta de colores según el modo actual.
+ * Hook que resuelve la paleta de colores según el modo actual y el acento.
  * Si el modo es 'system', usa el color scheme del dispositivo.
+ * El primary se sobreescribe con el color de acento seleccionado.
  */
 export function useThemeColors(): ThemeColors {
   const mode = useThemeStore((s) => s.mode);
+  const primaryAccent = useThemeStore((s) => s.primaryAccent);
   const systemScheme = useColorScheme();
 
-  if (mode === 'light') return lightColors;
-  if (mode === 'dark') return darkColors;
-  // system
-  return systemScheme === 'light' ? lightColors : darkColors;
+  const base =
+    mode === 'light' ? lightColors
+    : mode === 'dark' ? darkColors
+    : systemScheme === 'light' ? lightColors
+    : darkColors;
+
+  const accentColor = ACCENT_COLORS[primaryAccent] || base.primary;
+
+  return {
+    ...base,
+    primary: accentColor,
+    onPrimary: '#ffffff',
+  };
 }

@@ -68,10 +68,10 @@ export default function CategoriesScreen() {
               className="px-4 py-2 rounded-lg"
               style={{
                 backgroundColor:
-                  activeTab === tab.key ? `${colors.primary}26` : colors.glassSurface,
+                  activeTab === tab.key ? `${colors.primary}4d` : colors.glassSurface,
                 borderWidth: 1,
                 borderColor:
-                  activeTab === tab.key ? `${colors.primary}4D` : colors.glassBorder,
+                  activeTab === tab.key ? `${colors.primary}66` : colors.glassBorder,
               }}
               onPress={() => setActiveTab(tab.key)}
             >

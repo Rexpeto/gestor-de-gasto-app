@@ -1,8 +1,10 @@
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Action } from "@/components/Action";
+import { AnimatedProgressBar } from "@/components/AnimatedProgressBar";
+import { AnimatedSection } from "@/components/AnimatedSection";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CreditCard } from "@/components/CreditCard";
 import { useCategoryStore } from "@/store/category-store";
@@ -115,15 +117,26 @@ export default function DashboardScreen() {
     const isLoading = useTransactionStore((s) => s.isLoading);
 
     const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
-    console.log('[dashboard] monthlyBudget:', monthlyBudget);
-    console.log('[dashboard] netBalance:', monthlySummary?.balance);
-    console.log('[dashboard] displayBalance:', monthlyBudget + (monthlySummary?.balance ?? 0));
+    const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
+    const getRates = useRateStore((s) => s.getRates);
     const netBalance = monthlySummary?.balance ?? 0;
     const totalIncome = monthlySummary?.totalIncome ?? 0;
     const totalExpense = monthlySummary?.totalExpense ?? 0;
 
-    // Available = monthly budget + income - expense
-    const displayBalance = monthlyBudget + netBalance;
+    // Normalize monthlyBudget to USDT if user configured it in Bs
+    let budgetInUsdt = monthlyBudget;
+    if (budgetCurrency === 'Bs' && monthlySummary) {
+        const [yearStr, monthStr] = monthlySummary.month.split("-");
+        const m = parseInt(monthStr, 10) - 1;
+        const y = parseInt(yearStr, 10);
+        const p2p = getRates(m, y).p2pRate;
+        if (p2p > 0) {
+            budgetInUsdt = monthlyBudget / p2p;
+        }
+    }
+
+    // Available: in Bs mode show only budget (normalized); in USDT mode show budget + net flow
+    const displayBalance = budgetCurrency === 'Bs' ? budgetInUsdt : budgetInUsdt + netBalance;
 
     // ── USDT → USD/EUR conversion (reactive via ratesByMonth) ──
     const convert = useRateStore((s) => s.convert);
@@ -157,15 +170,39 @@ export default function DashboardScreen() {
         [categorySummaries],
     );
 
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            const store = useTransactionStore.getState();
+            await Promise.all([
+                store.loadTransactions(),
+                store.loadMonthlySummary(),
+                store.loadCategorySummaries(),
+            ]);
+        } finally {
+            setRefreshing(false);
+        }
+    }, []);
+
     return (
         <View className="flex-1" style={{ backgroundColor: colors.background }}>
             <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingBottom: 96 }}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
             >
                 {/* ── Hero Balance Card ── */}
-                <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
+                <AnimatedSection delay={100} duration={600} style={{ paddingHorizontal: 20, paddingTop: 40 }}>
                     <CreditCard
                         balance={displayBalance}
                         totalIncome={totalIncome}
@@ -173,7 +210,7 @@ export default function DashboardScreen() {
                         balanceUsd={balanceUsd}
                         balanceEur={balanceEur}
                     />
-                </View>
+                </AnimatedSection>
 
                 {/* ── Quick Actions ── */}
                 <View
@@ -184,23 +221,27 @@ export default function DashboardScreen() {
                         marginTop: 20,
                     }}
                 >
-                    <Action
-                        icon={ArrowDownLeft}
-                        label="Ingreso"
-                        onPress={() => openSheet("income")}
-                    />
+                    <AnimatedSection delay={200} duration={500} style={{ flex: 1 }}>
+                        <Action
+                            icon={ArrowDownLeft}
+                            label="Ingreso"
+                            onPress={() => openSheet("income")}
+                        />
+                    </AnimatedSection>
 
-                    <Action
-                        icon={CreditCardIcon}
-                        label="Gasto"
-                        color="#ce93d8"
-                        onPress={() => openSheet("expense")}
-                    />
+                    <AnimatedSection delay={300} duration={500} style={{ flex: 1 }}>
+                        <Action
+                            icon={CreditCardIcon}
+                            label="Gasto"
+                            color="#ce93d8"
+                            onPress={() => openSheet("expense")}
+                        />
+                    </AnimatedSection>
                 </View>
 
                 {/* ── Gastos por Categoría ── */}
                 {topExpenseCategories.length > 0 && (
-                    <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
+                    <AnimatedSection delay={400} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
                         <View
                             style={{
                                 flexDirection: "row",
@@ -247,8 +288,8 @@ export default function DashboardScreen() {
                                 gap: 16,
                             }}
                         >
-                            {topExpenseCategories.map((cat) => (
-                                <View key={cat.categoryId}>
+                            {topExpenseCategories.map((cat, index) => (
+                                <AnimatedSection key={cat.categoryId} delay={500 + index * 120} duration={500} distance={16}>
                                     <View
                                         style={{
                                             flexDirection: "row",
@@ -309,37 +350,25 @@ export default function DashboardScreen() {
                                                 </Text>
                                             </View>
 
-                                            {/* Progress bar */}
-                                            <View
-                                                style={{
-                                                    height: 6,
-                                                    borderRadius: 9999,
-                                                    overflow: "hidden",
-                                                    backgroundColor:
-                                                        colors.glassBorderStrong,
-                                                }}
-                                            >
-                                                <View
-                                                    style={{
-                                                        height: "100%",
-                                                        width: `${cat.percentage}%`,
-                                                        borderRadius: 9999,
-                                                        backgroundColor:
-                                                            cat.categoryColor ||
-                                                            "#57f1db",
-                                                    }}
-                                                />
-                                            </View>
+                                            <AnimatedProgressBar
+                                                percentage={cat.percentage}
+                                                color={cat.categoryColor || colors.primary}
+                                                trackColor={colors.glassBorderStrong}
+                                                delay={600 + index * 120}
+                                                duration={700}
+                                                height={6}
+                                                radius={9999}
+                                            />
                                         </View>
                                     </View>
-                                </View>
+                                </AnimatedSection>
                             ))}
                         </View>
-                    </View>
+                    </AnimatedSection>
                 )}
 
                 {/* ── Transacciones Recientes ── */}
-                <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
+                <AnimatedSection delay={700} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
                     <View
                         style={{
                             flexDirection: "row",
@@ -369,32 +398,35 @@ export default function DashboardScreen() {
                     </View>
 
                     {isLoading ? (
-                        <View
-                            style={{
-                                paddingVertical: 32,
-                                alignItems: "center",
-                            }}
-                        >
-                            <Text
+                        <AnimatedSection delay={900} duration={400}>
+                            <View
                                 style={{
-                                    fontFamily: "Inter",
-                                    color: colors.onSurfaceVariant,
+                                    paddingVertical: 32,
+                                    alignItems: "center",
                                 }}
                             >
-                                Cargando...
-                            </Text>
-                        </View>
+                                <Text
+                                    style={{
+                                        fontFamily: "Inter",
+                                        color: colors.onSurfaceVariant,
+                                    }}
+                                >
+                                    Cargando...
+                                </Text>
+                            </View>
+                        </AnimatedSection>
                     ) : recentTransactions.length === 0 ? (
-                        <View
-                            style={{
-                                backgroundColor: colors.glassSurface,
-                                borderWidth: 1,
-                                borderColor: colors.glassBorder,
-                                borderRadius: 12,
-                                padding: 32,
-                                alignItems: "center",
-                            }}
-                        >
+                        <AnimatedSection delay={900} duration={500}>
+                            <View
+                                style={{
+                                    backgroundColor: colors.glassSurface,
+                                    borderWidth: 1,
+                                    borderColor: colors.glassBorder,
+                                    borderRadius: 12,
+                                    padding: 32,
+                                    alignItems: "center",
+                                }}
+                            >
                             <Inbox size={48} color={colors.onSurfaceVariant} />
                             <Text
                                 style={{
@@ -413,7 +445,7 @@ export default function DashboardScreen() {
                                     paddingVertical: 8,
                                     borderRadius: 9999,
                                     borderWidth: 1,
-                                    borderColor: `${colors.primary}66`,
+                                    borderColor: `${colors.primary}99`,
                                 }}
                                 onPress={() => openSheet("expense")}
                             >
@@ -426,8 +458,9 @@ export default function DashboardScreen() {
                                 >
                                     Agregar primero
                                 </Text>
-                            </Pressable>
+                                </Pressable>
                         </View>
+                        </AnimatedSection>
                     ) : (
                         <View
                             style={{
@@ -444,7 +477,7 @@ export default function DashboardScreen() {
                                         tx.categoryId,
                                     );
                                     return (
-                                        <View key={tx.id}>
+                                        <AnimatedSection key={tx.id} delay={800 + index * 120} duration={500} distance={20}>
                                             {index > 0 && (
                                                 <View
                                                     style={{
@@ -466,13 +499,13 @@ export default function DashboardScreen() {
                                                     })
                                                 }
                                             />
-                                        </View>
+                                        </AnimatedSection>
                                     );
                                 },
                             )}
                         </View>
                     )}
-                </View>
+                </AnimatedSection>
             </ScrollView>
         </View>
     );

@@ -1,8 +1,8 @@
 import '../global.css';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useColorScheme, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider } from 'expo-router';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -90,6 +90,28 @@ export default function RootLayout() {
   const statusBarStyle =
     resolvedTheme === 'dark' ? 'light' : 'dark';
 
+  // Tema para React Navigation (tab bar, headers) — reactivo al acento/modo
+  const navigationTheme = useMemo(
+    () => ({
+      dark: resolvedTheme === 'dark',
+      colors: {
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.onSurface,
+        border: colors.outlineVariant,
+        notification: colors.primary,
+      },
+      fonts: {
+        regular: { fontFamily: 'Inter', fontWeight: '400' },
+        medium: { fontFamily: 'Inter', fontWeight: '600' },
+        bold: { fontFamily: 'Inter', fontWeight: '700' },
+        heavy: { fontFamily: 'Inter', fontWeight: '800' },
+      },
+    }),
+    [colors, resolvedTheme]
+  );
+
   if (!appIsReady) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -102,59 +124,85 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <HeroUINativeProvider>
-          <View className={`flex-1 bg-background ${resolvedTheme}`}>
-            <StatusBar style={statusBarStyle} />
-            <Stack
-              screenOptions={{
-                contentStyle: { backgroundColor: colors.background },
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="add-transaction"
-                options={{
-                  presentation: 'modal',
-                  headerShown: false,
-                  contentStyle: { backgroundColor: 'transparent' },
+          <ThemeProvider value={navigationTheme}>
+            <View className={`flex-1 bg-background ${resolvedTheme}`}>
+              <StatusBar style={statusBarStyle} />
+              <Stack
+                screenOptions={{
+                  contentStyle: { backgroundColor: colors.background },
                 }}
-              />
-              <Stack.Screen
-                name="categories"
-                options={{
-                  title: 'Categorías',
-                  headerStyle: { backgroundColor: colors.background },
-                  headerTintColor: colors.onSurface,
-                }}
-              />
-              <Stack.Screen
-                name="presupuesto"
-                options={{
-                  title: 'Presupuesto',
-                  headerStyle: { backgroundColor: colors.background },
-                  headerTintColor: colors.onSurface,
-                }}
-              />
-              <Stack.Screen
-                name="add-category"
-                options={{
-                  presentation: 'modal',
-                  title: 'Nueva categoría',
-                  headerStyle: { backgroundColor: colors.background },
-                  headerTintColor: colors.onSurface,
-                }}
-              />
-            </Stack>
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="add-transaction"
+                  options={{
+                    presentation: 'modal',
+                    headerShown: false,
+                    contentStyle: { backgroundColor: 'transparent' },
+                  }}
+                />
+                <Stack.Screen
+                  name="categories"
+                  options={{
+                    title: 'Categorías',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+                <Stack.Screen
+                  name="presupuesto"
+                  options={{
+                    title: 'Presupuesto',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+                <Stack.Screen
+                  name="add-category"
+                  options={{
+                    presentation: 'modal',
+                    title: 'Nueva categoría',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+                <Stack.Screen
+                  name="apariencia"
+                  options={{
+                    title: 'Apariencia',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+                <Stack.Screen
+                  name="database"
+                  options={{
+                    title: 'Base de Datos',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+                <Stack.Screen
+                  name="fiscal"
+                  options={{
+                    title: 'Fiscal',
+                    headerStyle: { backgroundColor: colors.background },
+                    headerTintColor: colors.onSurface,
+                  }}
+                />
+              </Stack>
 
-            {/* BottomSheet a nivel raíz — POR ENCIMA de los tabs */}
-            <AddTransactionSheet
-              isOpen={sheetIsOpen}
-              initialType={sheetType}
-              onClose={closeSheet}
-            />
+              {/* BottomSheet a nivel raíz — POR ENCIMA de los tabs */}
+              <AddTransactionSheet
+                isOpen={sheetIsOpen}
+                initialType={sheetType}
+                onClose={closeSheet}
+              />
 
-            {/* Toast notifications - POR ENCIMA de todo */}
-            <ToastMessage config={toastConfig} />
-          </View>
+              {/* Toast notifications - POR ENCIMA de todo */}
+              <ToastMessage config={toastConfig} />
+            </View>
+          </ThemeProvider>
         </HeroUINativeProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

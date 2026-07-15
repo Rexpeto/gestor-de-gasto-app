@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
 import type {
@@ -727,4 +728,204 @@ export async function resetDatabase(): Promise<void> {
 
   // Seed categories from scratch (includes curated income categories)
   await seedDefaultCategories(database);
+}
+
+// ─── Database File Management ──────────────────────────────────
+
+/**
+ * Deletes the entire database file from disk.
+ * Resets the in-memory connection so the next getDatabase() creates a fresh one.
+ */
+export async function deleteDatabase(): Promise<void> {
+  // Reset in-memory connection
+  if (db) {
+    try {
+      await db.closeAsync();
+    } catch {
+      // ignore — may already be closed
+    }
+    db = null;
+    dbPromise = null;
+  }
+
+  // Delete the file from device storage
+  const documentDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+  const dbPath = `${documentDir}SQLite/${DB_NAME}`;
+  try {
+    const info = await FileSystem.getInfoAsync(dbPath);
+    if (info.exists) {
+      await FileSystem.deleteAsync(dbPath, { idempotent: true });
+    }
+  } catch {
+    // Fallback: try the Expo SQLite default path
+    const fallbackPath = `${FileSystem.documentDirectory}SQLite/${DB_NAME}`;
+    try {
+      await FileSystem.deleteAsync(fallbackPath, { idempotent: true });
+    } catch {
+      // If neither works, the next getDatabase() will create a fresh one anyway
+    }
+  }
+}
+
+// ─── Export / Import ────────────────────────────────────────────
+
+export interface ExportData {
+  version: number;
+  exportedAt: string;
+  categories: Array<{
+    id?: number; // optional — import assigns new IDs
+    name: string;
+    icon: string;
+    color: string;
+    type: TransactionType;
+  }>;
+  transactions: Array<{
+    amount: number;
+    type: TransactionType;
+    categoryName: string; // matched by name on import
+    description: string;
+    date: string;
+    createdAt: string;
+  }>;
+  monthlyRates: Array<{
+    month: number;
+    year: number;
+    p2pRate: number;
+    bcvUsdRate: number;
+    bcvEurRate: number;
+  }>;
+  settings: Array<{
+    key: string;
+    value: string;
+  }>;
+}
+
+/**
+ * Exports all data as a JSON string.
+ */
+export async function exportDatabase(): Promise<string> {
+  const database = await getDatabase();
+
+  const categories = await database.getAllAsync<{
+    id: number;
+    name: string;
+    icon: string;
+    color: string;
+    type: string;
+  }>('SELECT * FROM categories ORDER BY id');
+
+  const transactions = await database.getAllAsync<{
+    id: number;
+    amount: number;
+    type: string;
+    category_id: number;
+    description: string;
+    date: string;
+    created_at: string;
+  }>('SELECT * FROM transactions ORDER BY id');
+
+  const monthlyRates = await database.getAllAsync<{
+    month: number;
+    year: number;
+    p2p_rate: number;
+    bcv_usd_rate: number;
+    bcv_eur_rate: number;
+  }>('SELECT * FROM monthly_rates ORDER BY year, month');
+
+  const settings = await database.getAllAsync<{
+    key: string;
+    value: string;
+  }>('SELECT * FROM settings');
+
+  // Build category-name lookup for transactions
+  const catMap = new Map<number, string>();
+  for (const c of categories) {
+    catMap.set(c.id, c.name);
+  }
+
+  const data: ExportData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    categories: categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      color: c.color,
+      type: c.type as TransactionType,
+    })),
+    transactions: transactions.map((t) => ({
+      amount: t.amount,
+      type: t.type as TransactionType,
+      categoryName: catMap.get(t.category_id) ?? 'Otros gastos',
+      description: t.description ?? '',
+      date: t.date,
+      createdAt: t.created_at,
+    })),
+    monthlyRates: monthlyRates.map((r) => ({
+      month: r.month,
+      year: r.year,
+      p2pRate: r.p2p_rate,
+      bcvUsdRate: r.bcv_usd_rate,
+      bcvEurRate: r.bcv_eur_rate,
+    })),
+    settings: settings.map((s) => ({
+      key: s.key,
+      value: s.value,
+    })),
+  };
+
+  return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Imports data from a JSON string — replaces ALL current data.
+ */
+export async function importDatabase(json: string): Promise<void> {
+  const database = await getDatabase();
+  const data: ExportData = JSON.parse(json);
+
+  // Clear existing data (order: transactions first due to FK)
+  await database.execAsync(`
+    DELETE FROM transactions;
+    DELETE FROM categories;
+    DELETE FROM monthly_rates;
+    DELETE FROM settings;
+  `);
+
+  // Insert categories and build name → new-id map
+  const catNameToId = new Map<string, number>();
+  for (const cat of data.categories) {
+    const result = await database.runAsync(
+      'INSERT INTO categories (name, icon, color, type) VALUES (?, ?, ?, ?)',
+      [cat.name, cat.icon, cat.color, cat.type],
+    );
+    catNameToId.set(cat.name, Number(result.lastInsertRowId));
+  }
+
+  // Insert transactions
+  for (const tx of data.transactions) {
+    const categoryId = catNameToId.get(tx.categoryName);
+    if (!categoryId) continue; // skip if category not found
+    await database.runAsync(
+      'INSERT INTO transactions (amount, type, category_id, description, date, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.createdAt],
+    );
+  }
+
+  // Insert monthly rates
+  for (const r of data.monthlyRates) {
+    await database.runAsync(
+      `INSERT INTO monthly_rates (month, year, p2p_rate, bcv_usd_rate, bcv_eur_rate)
+       VALUES (?, ?, ?, ?, ?)`,
+      [r.month, r.year, r.p2pRate, r.bcvUsdRate, r.bcvEurRate],
+    );
+  }
+
+  // Insert settings
+  for (const s of data.settings) {
+    await database.runAsync(
+      'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+      [s.key, s.value],
+    );
+  }
 }
