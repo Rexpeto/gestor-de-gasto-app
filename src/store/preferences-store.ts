@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { getSetting, setSetting } from '@/db/database';
+import type { BudgetCurrency } from '@/store/budget-store';
 
 const SETTINGS_KEYS = {
   monthlyBudget: 'monthly_budget',
@@ -17,7 +18,7 @@ interface PreferencesState {
   /** Monthly budget in USDT */
   monthlyBudget: number;
   /** Whether budget is in USDT or Bs */
-  budgetCurrency: 'USDT' | 'Bs';
+  budgetCurrency: BudgetCurrency;
   /** Whether DB values have been loaded */
   loaded: boolean;
 
@@ -26,7 +27,7 @@ interface PreferencesState {
   setShowCategories: (val: boolean) => void;
   setShowPresupuesto: (val: boolean) => void;
   setMonthlyBudget: (val: number) => Promise<void>;
-  setBudgetCurrency: (val: 'USDT' | 'Bs') => Promise<void>;
+  setBudgetCurrency: (val: BudgetCurrency) => Promise<void>;
 }
 
 export const usePreferencesStore = create<PreferencesState>((set) => ({

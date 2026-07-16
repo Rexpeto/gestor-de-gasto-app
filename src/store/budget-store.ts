@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 
+export type BudgetCurrency = 'USDT' | 'Bs' | '$' | '€';
+
 export interface Budget {
   categoryId: number;
   amount: number; // monthly limit
+  currency: BudgetCurrency;
   enabled: boolean;
 }
 
@@ -18,7 +21,7 @@ export interface BudgetState {
   exchangeRates: ExchangeRate[];
   baseCurrency: string;
 
-  setBudget: (categoryId: number, amount: number) => void;
+  setBudget: (categoryId: number, amount: number, currency?: BudgetCurrency) => void;
   toggleBudget: (categoryId: number) => void;
   removeBudget: (categoryId: number) => void;
 
@@ -45,18 +48,18 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   exchangeRates: DEFAULT_EXCHANGE_RATES,
   baseCurrency: 'USD',
 
-  setBudget: (categoryId, amount) =>
+  setBudget: (categoryId, amount, currency = '$') =>
     set((s) => {
       const existing = s.budgets.find((b) => b.categoryId === categoryId);
       if (existing) {
         return {
           budgets: s.budgets.map((b) =>
-            b.categoryId === categoryId ? { ...b, amount } : b,
+            b.categoryId === categoryId ? { ...b, amount, currency } : b,
           ),
         };
       }
       return {
-        budgets: [...s.budgets, { categoryId, amount, enabled: true }],
+        budgets: [...s.budgets, { categoryId, amount, currency, enabled: true }],
       };
     }),
 

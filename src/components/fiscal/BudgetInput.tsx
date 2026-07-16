@@ -3,42 +3,55 @@ import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { useThemeColors } from "@/store/theme-store";
 
+type BudgetCurrency = "$" | "€" | "Bs" | "USDT";
+
 interface BudgetInputProps {
     value: string;
     onChangeText: (text: string) => void;
-    currency: string;
-    onCurrencyChange: (currency: "USDT" | "Bs") => void;
+    currency: BudgetCurrency;
+    onCurrencyChange: (currency: BudgetCurrency) => void;
+    size?: "sm" | "lg";
 }
 
-const CURRENCIES = ["USDT", "Bs"];
+const CURRENCIES: BudgetCurrency[] = ["$", "€", "Bs", "USDT"];
 
 /**
- * Large budget amount input with currency dropdown. Used in fiscal settings.
+ * Budget amount input with currency dropdown. Used in fiscal and budget screens.
+ * size="lg" for fiscal (36px font), size="sm" for budget categories (14px font).
  */
 export function BudgetInput({
     value,
     onChangeText,
     currency,
     onCurrencyChange,
+    size = "lg",
 }: BudgetInputProps) {
     const colors = useThemeColors();
     const [showDropdown, setShowDropdown] = useState(false);
+
+    const isLarge = size === "lg";
 
     return (
         <View
             style={{
                 flexDirection: "row",
-                alignItems: "baseline",
-                gap: 8,
+                alignItems: isLarge ? "baseline" : "center",
+                gap: isLarge ? 8 : 4,
             }}
         >
             <TextInput
                 style={{
                     fontFamily: "Geist",
-                    fontSize: 36,
+                    fontSize: isLarge ? 36 : 14,
                     fontWeight: "700",
                     color: colors.onSurface,
-                    minWidth: 140,
+                    minWidth: isLarge ? 140 : 60,
+                    backgroundColor: isLarge ? "transparent" : `${colors.primary}33`,
+                    borderWidth: isLarge ? 0 : 1,
+                    borderColor: isLarge ? "transparent" : `${colors.primary}4d`,
+                    borderRadius: isLarge ? 0 : 8,
+                    paddingHorizontal: isLarge ? 0 : 8,
+                    paddingVertical: isLarge ? 0 : 4,
                 }}
                 keyboardType="decimal-pad"
                 value={value}
@@ -51,9 +64,9 @@ export function BudgetInput({
                     style={{
                         flexDirection: "row",
                         alignItems: "center",
-                        gap: 6,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
+                        gap: 4,
+                        paddingHorizontal: isLarge ? 12 : 6,
+                        paddingVertical: isLarge ? 6 : 4,
                         borderRadius: 8,
                         backgroundColor: colors.glassSurface,
                         borderWidth: 1,
@@ -64,14 +77,14 @@ export function BudgetInput({
                     <Text
                         style={{
                             fontFamily: "Inter",
-                            fontSize: 16,
+                            fontSize: isLarge ? 16 : 12,
                             fontWeight: "600",
                             color: colors.onSurface,
                         }}
                     >
                         {currency}
                     </Text>
-                    <ChevronDown size={14} color={colors.outline} />
+                    <ChevronDown size={isLarge ? 14 : 10} color={colors.outline} />
                 </Pressable>
                 {showDropdown && (
                     <View
@@ -101,7 +114,7 @@ export function BudgetInput({
                                             : "transparent",
                                 }}
                                 onPress={() => {
-                                    onCurrencyChange(c as "USDT" | "Bs");
+                                    onCurrencyChange(c);
                                     setShowDropdown(false);
                                 }}
                             >

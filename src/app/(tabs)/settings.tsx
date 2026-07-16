@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Database, Landmark, Palette, Tags } from "lucide-react-native/icons";
+import { CircleDollarSign, Database, Landmark, Palette, Tags } from "lucide-react-native/icons";
 import { ScrollView, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/settings/GlassCard";
@@ -27,6 +27,12 @@ const NAV_ITEMS: {
         route: "/fiscal",
     },
     {
+        icon: CircleDollarSign,
+        label: "Presupuesto",
+        subtitle: "Configurar límites mensuales por categoría",
+        route: "/budget",
+    },
+    {
         icon: Tags,
         label: "Categorías de Gastos",
         subtitle: "Administrar categorías de ingresos y gastos",
@@ -47,7 +53,7 @@ export default function SettingsScreen() {
 
     return (
         <ScrollView
-            style={{ flex: 1, backgroundColor: colors.background }}
+            style={{ flex: 1, backgroundColor: colors.background, paddingBottom: 42 }}
             contentContainerStyle={{ paddingBottom: 112 }}
         >
             <View style={{ paddingHorizontal: 20, gap: 20 }}>

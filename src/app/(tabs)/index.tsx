@@ -3,11 +3,12 @@ import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
 import { AnimatedSection } from "@/components/AnimatedSection";
+import { CategorySummaryList } from "@/components/CategorySummaryList";
 import { CreditCard } from "@/components/CreditCard";
-import { ExpenseCategories } from "@/components/ExpenseCategories";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTransactions } from "@/components/RecentTransactions";
 import { showAlert } from "@/store/alert-store";
+import { useBudgetStore } from "@/store/budget-store";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
@@ -22,8 +23,10 @@ export default function DashboardScreen() {
 
     const transactions = useTransactionStore((s) => s.transactions);
     const monthlySummary = useTransactionStore((s) => s.monthlySummary);
-    const categorySummaries = useTransactionStore((s) => s.categorySummaries);
+    const incomeCategorySummaries = useTransactionStore((s) => s.incomeCategorySummaries);
+    const expenseCategorySummaries = useTransactionStore((s) => s.expenseCategorySummaries);
     const categories = useCategoryStore((s) => s.categories);
+    const budgets = useBudgetStore((s) => s.budgets);
     const isLoading = useTransactionStore((s) => s.isLoading);
 
     const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
@@ -71,13 +74,22 @@ export default function DashboardScreen() {
         [transactions],
     );
 
-    const topExpenseCategories = useMemo(
+    const topIncomeCategories = useMemo(
         () =>
-            categorySummaries
+            incomeCategorySummaries
                 .filter((c) => c.total > 0)
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 4),
-        [categorySummaries],
+        [incomeCategorySummaries],
+    );
+
+    const topExpenseCategories = useMemo(
+        () =>
+            expenseCategorySummaries
+                .filter((c) => c.total > 0)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 4),
+        [expenseCategorySummaries],
     );
 
     const removeTransaction = useTransactionStore((s) => s.removeTransaction);
@@ -176,10 +188,24 @@ export default function DashboardScreen() {
                     getCategoryInfo={getCategoryInfo}
                 />
 
-                {/* ── Gastos por Categoría ── */}
-                <ExpenseCategories
-                    categories={topExpenseCategories}
+                {/* ── Ingresos por Categoría ── */}
+                <CategorySummaryList
+                    title="Ingresos por Categoría"
+                    categories={topIncomeCategories}
+                    budgets={budgets}
                     colors={colors}
+                    delay={700}
+                    type="income"
+                />
+
+                {/* ── Gastos por Categoría ── */}
+                <CategorySummaryList
+                    title="Gastos por Categoría"
+                    categories={topExpenseCategories}
+                    budgets={budgets}
+                    colors={colors}
+                    delay={900}
+                    type="expense"
                 />
                 </View>
             </ScrollView>

@@ -153,7 +153,7 @@ export default function RootLayout() {
                   }}
                 />
                 <Stack.Screen
-                  name="presupuesto"
+                  name="budget"
                   options={{
                     title: 'Presupuesto',
                     headerStyle: { backgroundColor: colors.background },

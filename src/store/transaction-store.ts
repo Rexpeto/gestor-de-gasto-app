@@ -34,6 +34,8 @@ interface TransactionState {
   transactions: Transaction[];
   monthlySummary: MonthlySummary | null;
   categorySummaries: CategorySummary[];
+  incomeCategorySummaries: CategorySummary[];
+  expenseCategorySummaries: CategorySummary[];
   // Filters
   selectedMonth: number; // 1-12
   selectedYear: number;
@@ -57,6 +59,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   transactions: [],
   monthlySummary: null,
   categorySummaries: [],
+  incomeCategorySummaries: [],
+  expenseCategorySummaries: [],
   selectedMonth: new Date().getMonth() + 1,
   selectedYear: new Date().getFullYear(),
   filterType: 'all',
@@ -119,11 +123,11 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     // Compute per-category totals with USDT conversion
     const incomeMap = new Map<
       number,
-      { name: string; icon: string; color: string; total: number }
+      { name: string; icon: string; color: string; total: number; currencies: Set<string> }
     >();
     const expenseMap = new Map<
       number,
-      { name: string; icon: string; color: string; total: number }
+      { name: string; icon: string; color: string; total: number; currencies: Set<string> }
     >();
     let grandIncome = 0;
     let grandExpense = 0;
@@ -146,8 +150,10 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
           icon,
           color,
           total: 0,
+          currencies: new Set<string>(),
         };
         entry.total += usdtAmount;
+        entry.currencies.add(tx.currency);
         incomeMap.set(tx.categoryId, entry);
       } else {
         grandExpense += usdtAmount;
@@ -156,11 +162,19 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
           icon,
           color,
           total: 0,
+          currencies: new Set<string>(),
         };
         entry.total += usdtAmount;
+        entry.currencies.add(tx.currency);
         expenseMap.set(tx.categoryId, entry);
       }
     }
+
+    // Determine dominant currency: if all txs same currency, use it; else 'mixed'
+    const dominantCurrency = (currencies: Set<string>): string => {
+      if (currencies.size === 1) return [...currencies][0];
+      return 'mixed';
+    };
 
     const incomeCategories: CategorySummary[] = Array.from(
       incomeMap.entries(),
@@ -171,6 +185,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       categoryColor: data.color,
       total: data.total,
       percentage: grandIncome > 0 ? (data.total / grandIncome) * 100 : 0,
+      currency: dominantCurrency(data.currencies),
     }));
 
     const expenseCategories: CategorySummary[] = Array.from(
@@ -182,10 +197,13 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       categoryColor: data.color,
       total: data.total,
       percentage: grandExpense > 0 ? (data.total / grandExpense) * 100 : 0,
+      currency: dominantCurrency(data.currencies),
     }));
 
     set({
       categorySummaries: [...incomeCategories, ...expenseCategories],
+      incomeCategorySummaries: incomeCategories,
+      expenseCategorySummaries: expenseCategories,
     });
   },
 

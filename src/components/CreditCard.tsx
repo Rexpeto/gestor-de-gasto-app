@@ -56,7 +56,9 @@ export function CreditCard({
   const showConversion = balance > 0;
 
   const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
-  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>(budgetCurrency);
+  const [currencyMode, setCurrencyMode] = useState<CurrencyMode>(
+    budgetCurrency === 'Bs' ? 'Bs' : 'USDT'
+  );
 
   // Parse current month/year from monthlySummary (format: "YYYY-MM")
   const now = new Date();

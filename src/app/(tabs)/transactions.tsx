@@ -1,7 +1,6 @@
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterPills } from "@/components/FilterPills";
-import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { SearchBar } from "@/components/SearchBar";
 import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
 import { TransactionRow } from "@/components/TransactionRow";
@@ -11,7 +10,6 @@ import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { Transaction, TransactionType } from "@/types";
-import { router } from "expo-router";
 import { Inbox } from "lucide-react-native/icons";
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
@@ -245,10 +243,6 @@ export default function TransactionsScreen() {
                     )}
                 </ScrollView>
             </View>
-
-            <FloatingAddButton
-                onPress={() => router.push("/add-transaction")}
-            />
         </View>
     );
 }

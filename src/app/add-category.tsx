@@ -1,14 +1,12 @@
 import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
-import { Input } from 'heroui-native/input';
-import { Label } from 'heroui-native/label';
-import { TextField } from 'heroui-native/text-field';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -17,6 +15,7 @@ import { showSuccessToast, showErrorToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors } from '@/store/theme-store';
 import type { TransactionType } from '@/types';
+import { ArrowRight } from 'lucide-react-native/icons';
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
   { value: 'expense', label: 'Gasto' },
@@ -57,7 +56,7 @@ export default function AddCategoryScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [addCategory, color, icon, name, router, type]);
+  }, [addCategory, color, icon, name, type]);
 
   return (
     <KeyboardAvoidingView
@@ -67,34 +66,46 @@ export default function AddCategoryScreen() {
     >
       <ScrollView
         className="flex-1"
-        contentContainerClassName="px-5 pt-2 pb-12"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         {/* ── Type Selector ── */}
         <Text
-          className="text-xs font-semibold uppercase tracking-widest mb-2"
-          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
+          style={{
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.05,
+            textTransform: 'uppercase',
+            color: colors.onSurfaceVariant,
+            marginBottom: 8,
+          }}
         >
           Tipo
         </Text>
-        <View className="flex-row gap-2 mb-5">
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
           {TYPE_OPTIONS.map((opt) => (
             <Pressable
               key={opt.value}
-              className="flex-1 py-3.5 rounded-xl items-center"
               style={{
+                flex: 1,
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: 'center',
                 backgroundColor:
-                  type === opt.value ? colors.primary + '1F' : colors.glassSurface,
+                  type === opt.value ? `${colors.primary}1F` : colors.surfaceContainerHigh,
                 borderWidth: 1,
                 borderColor:
-                  type === opt.value ? colors.primary + '4D' : colors.glassBorder,
+                  type === opt.value ? `${colors.primary}4D` : colors.glassBorder,
               }}
               onPress={() => setType(opt.value)}
             >
               <Text
-                className="text-sm font-medium"
                 style={{
                   fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: '500',
                   color: type === opt.value ? colors.primary : colors.onSurfaceVariant,
                 }}
               >
@@ -104,135 +115,197 @@ export default function AddCategoryScreen() {
           ))}
         </View>
 
-        {/* ── Name ── */}
-        <View
-          className="rounded-xl p-3 mb-4"
+        {/* ── Name Input ── */}
+        <Text
           style={{
-            backgroundColor: colors.glassSurface,
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.05,
+            textTransform: 'uppercase',
+            color: colors.onSurfaceVariant,
+            marginBottom: 8,
           }}
         >
-          <TextField isRequired>
-            <Label className="text-xs uppercase tracking-wider font-sans" style={{ color: colors.onSurfaceVariant }}>
-              Nombre
-            </Label>
-            <Input
-              placeholder="Ej: Supermercado"
-              placeholderTextColor={colors.outline}
-              value={name}
-              onChangeText={setName}
-              style={{ fontFamily: 'Inter', color: colors.onSurface }}
-            />
-          </TextField>
+          Nombre
+        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.surfaceContainerHigh,
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            marginBottom: 20,
+          }}
+        >
+          <TextInput
+            placeholder="Ej: Supermercado"
+            placeholderTextColor={colors.outline}
+            value={name}
+            onChangeText={setName}
+            style={{
+              flex: 1,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: colors.onSurface,
+              paddingVertical: 12,
+            }}
+          />
         </View>
 
-        {/* ── Icon Picker ── */}
+        {/* ── Icon Picker (scrollable) ── */}
         <Text
-          className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
-          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
+          style={{
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.05,
+            textTransform: 'uppercase',
+            color: colors.onSurfaceVariant,
+            marginBottom: 8,
+          }}
         >
           Icono
         </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {PRESET_ICONS.map((ic) => (
-            <Pressable
-              key={ic}
-              className="w-11 h-11 rounded-xl items-center justify-center"
-              style={{
-                backgroundColor:
-                  icon === ic ? colors.primary + '1F' : colors.glassSurface,
-                borderWidth: 1,
-                borderColor:
-                  icon === ic ? colors.primary + '4D' : colors.glassBorder,
-              }}
-              onPress={() => setIcon(ic)}
-            >
-              <CategoryIcon
+        <ScrollView
+          style={{ maxHeight: 200, marginBottom: 20 }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {PRESET_ICONS.map((ic) => (
+              <Pressable
+                key={ic}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor:
+                    icon === ic ? `${colors.primary}1F` : colors.surfaceContainerHigh,
+                  borderWidth: 1,
+                  borderColor:
+                    icon === ic ? `${colors.primary}4D` : colors.glassBorder,
+                }}
+                onPress={() => setIcon(ic)}
+              >
+                <CategoryIcon
                   name={ic}
                   size={20}
                   color={icon === ic ? colors.primary : colors.onSurfaceVariant}
                 />
-            </Pressable>
-          ))}
-        </View>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
 
-        {/* ── Color Picker ── */}
+        {/* ── Color Picker (scrollable) ── */}
         <Text
-          className="text-xs font-semibold uppercase tracking-widest mt-4 mb-2"
-          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
+          style={{
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.05,
+            textTransform: 'uppercase',
+            color: colors.onSurfaceVariant,
+            marginBottom: 8,
+          }}
         >
           Color
         </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {PRESET_COLORS.map((c) => (
-            <Pressable
-              key={c}
-              className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{
-                backgroundColor: c,
-                borderWidth: color === c ? 2 : 0,
-                borderColor: color === c ? colors.primary : 'transparent',
-              }}
-              onPress={() => setColor(c)}
-            >
-              {color === c && (
-                <Text className="text-white text-sm font-bold">✓</Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
+        <ScrollView
+          style={{ maxHeight: 180, marginBottom: 20 }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {PRESET_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: c,
+                  borderWidth: color === c ? 2 : 0,
+                  borderColor: color === c ? colors.primary : 'transparent',
+                }}
+                onPress={() => setColor(c)}
+              >
+                {color === c && (
+                  <Text style={{ color: 'white', fontSize: 14, fontWeight: '700' }}>✓</Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
 
         {/* ── Preview ── */}
-        <View className="mt-6 items-center">
+        <View style={{ marginTop: 8, alignItems: 'center' }}>
           <View
-            className="w-20 h-20 rounded-2xl items-center justify-center"
             style={{
-              backgroundColor: color + '20',
+              width: 72,
+              height: 72,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: `${color}20`,
               borderWidth: 1,
               borderColor: colors.glassBorder,
             }}
           >
-            <CategoryIcon name={icon} size={36} color={color} />
+            <CategoryIcon name={icon} size={32} color={color} />
           </View>
           <Text
-            className="font-medium mt-2"
-            style={{ fontFamily: 'Inter', color: colors.onSurface }}
+            style={{
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: '500',
+              color: colors.onSurface,
+              marginTop: 8,
+            }}
           >
             {name || 'Nombre'}
           </Text>
         </View>
 
-        {/* ── Submit ── */}
-        <View className="mt-8 gap-3">
+        {/* ── Submit Button ── */}
+        <View style={{ marginTop: 24 }}>
           <Pressable
-            className="w-full py-3.5 rounded-full items-center"
-            style={{ backgroundColor: isSubmitting ? colors.primary + '80' : colors.primary }}
-            disabled={isSubmitting}
             onPress={handleSubmit}
+            disabled={isSubmitting}
+            style={{
+              height: 56,
+              borderRadius: 24,
+              backgroundColor: isSubmitting ? `${colors.primary}80` : colors.primary,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 8,
+              shadowColor: colors.primary,
+              shadowOpacity: 0.3,
+              shadowRadius: 25,
+              shadowOffset: { width: 0, height: 20 },
+            }}
+            android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
           >
             <Text
-              className="text-base font-semibold"
-              style={{ fontFamily: 'Inter', color: colors.onPrimary }}
+              style={{
+                fontFamily: 'Inter-SemiBold',
+                fontSize: 16,
+                fontWeight: '600',
+                color: colors.onPrimary,
+              }}
             >
               Crear categoría
             </Text>
-          </Pressable>
-          <Pressable
-            className="w-full py-3.5 rounded-full items-center"
-            style={{
-              backgroundColor: colors.glassSurface,
-              borderWidth: 1,
-              borderColor: colors.glassBorder,
-            }}
-            onPress={() => router.back()}
-          >
-            <Text
-              className="text-base font-medium"
-              style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
-            >
-              Cancelar
-            </Text>
+            <ArrowRight size={18} color={colors.onPrimary} />
           </Pressable>
         </View>
       </ScrollView>

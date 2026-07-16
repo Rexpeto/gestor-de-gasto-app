@@ -42,6 +42,7 @@ export interface CategorySummary {
   categoryColor: string;
   total: number;
   percentage: number;
+  currency: string; // dominant currency ('usdt' | 'bsc' | 'eur') — 'mixed' if varied
 }
 
 // ─── Exchange Rates ─────────────────────────────────────────────
