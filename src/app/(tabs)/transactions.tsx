@@ -1,21 +1,22 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
+import { AnimatedSection } from "@/components/AnimatedSection";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterPills } from "@/components/FilterPills";
+import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { SearchBar } from "@/components/SearchBar";
 import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
-import { useSheetStore } from "@/store/sheet-store";
+import { TransactionRow } from "@/components/TransactionRow";
+import { showAlert } from "@/store/alert-store";
 import { useCategoryStore } from "@/store/category-store";
+import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { Transaction, TransactionType } from "@/types";
-import { formatCurrency } from "@/utils/format";
 import { router } from "expo-router";
-import { Inbox, Plus, Search } from "lucide-react-native/icons";
+import { Inbox } from "lucide-react-native/icons";
 import { useCallback, useMemo, useState } from "react";
-import {
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
-} from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+
+// ── Date Grouping ────────────────────────────────────────────────────────────
 
 const getDateLabel = (dateStr: string): string => {
     const date = new Date(dateStr + "T00:00:00");
@@ -29,8 +30,13 @@ const getDateLabel = (dateStr: string): string => {
     if (date.getTime() === today.getTime()) return "Hoy";
     if (date.getTime() === yesterday.getTime()) return "Ayer";
     if (date.getTime() >= weekStart.getTime()) return "Esta Semana";
-    return date.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+    return date.toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+    });
 };
+
+// ── Constants ────────────────────────────────────────────────────────────────
 
 type FilterType = "all" | TransactionType;
 const FILTERS: { key: FilterType; label: string }[] = [
@@ -39,17 +45,24 @@ const FILTERS: { key: FilterType; label: string }[] = [
     { key: "income", label: "Ingresos" },
 ];
 
+// ── Screen ───────────────────────────────────────────────────────────────────
+
 export default function TransactionsScreen() {
     const colors = useThemeColors();
     const transactions = useTransactionStore((s) => s.transactions);
     const removeTransaction = useTransactionStore((s) => s.removeTransaction);
     const categories = useCategoryStore((s) => s.categories);
     const openSheet = useSheetStore((s) => s.openSheet);
+
     const [filterType, setFilterType] = useState<FilterType>("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
+
+    // ── Derived Data ──────────────────────────────────────────────────────
 
     const getCategoryInfo = useCallback(
-        (categoryId: number) => categories.find((c) => c.id === categoryId),
+        (categoryId: number) =>
+            categories.find((c) => c.id === categoryId),
         [categories],
     );
 
@@ -81,273 +94,161 @@ export default function TransactionsScreen() {
         return map;
     }, [filteredTransactions]);
 
+    // ── Handlers ──────────────────────────────────────────────────────────
+
+    const handleEditTransaction = useCallback(
+        (transactionId: number) => {
+            const tx = transactions.find((t) => t.id === transactionId);
+            if (tx) openSheet(tx.type, tx);
+        },
+        [transactions, openSheet],
+    );
+
+    const handleDeleteTransaction = useCallback(
+        async (transactionId: number) => {
+            try {
+                await removeTransaction(transactionId);
+            } catch {
+                showAlert(
+                    "Error",
+                    "No se pudo eliminar la transacción",
+                );
+            }
+        },
+        [removeTransaction],
+    );
+
+    // ── Pull-to-Refresh ───────────────────────────────────────────────────
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            const store = useTransactionStore.getState();
+            await Promise.all([
+                store.loadTransactions(),
+                store.loadMonthlySummary(),
+                store.loadCategorySummaries(),
+            ]);
+        } finally {
+            setRefreshing(false);
+        }
+    }, []);
+
+    // ── Render ────────────────────────────────────────────────────────────
+
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-            {/* Content Container */}
             <View style={{ flex: 1, paddingTop: 42 }}>
-                {/* Search Bar */}
-                <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            backgroundColor: "rgba(33, 33, 33, 0.7)",
-                            borderRadius: 12,
-                            paddingHorizontal: 12,
-                            paddingVertical: 12,
-                        }}
-                    >
-                        <Search size={20} color="#888888" />
-                        <TextInput
-                            style={{
-                                marginLeft: 8,
-                                fontFamily: "Inter",
-                                fontSize: 15,
-                                color: "#ffffff",
-                                flex: 1,
-                                backgroundColor: "transparent",
-                                borderWidth: 0,
-                                padding: 0,
-                            }}
-                            placeholder="Buscar comercio o categoría..."
-                            placeholderTextColor="#888888"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                    </View>
-                </View>
+                <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Buscar comercio o categoría..."
+                />
 
-                {/* Filter Pills */}
-                <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                    >
-                        <View style={{ flexDirection: "row", gap: 12 }}>
-                            {FILTERS.map((f) => {
-                                const active = filterType === f.key;
-                                return (
-                                    <Pressable
-                                        key={f.key}
-                                        style={{
-                                            paddingHorizontal: 16,
-                                            paddingVertical: 8,
-                                            borderRadius: 20,
-                                            backgroundColor: active
-                                                ? colors.primary
-                                                : colors.surfaceContainer,
-                                            borderWidth: active ? 0 : 1,
-                                            borderColor: "#3c4a46",
-                                            ...(active
-                                                ? {
-                                                      shadowColor: colors.primary,
-                                                      shadowOffset: {
-                                                          width: 0,
-                                                          height: 4,
-                                                      },
-                                                      shadowOpacity: 0.25,
-                                                      shadowRadius: 8,
-                                                  }
-                                                : {}),
-                                        }}
-                                        onPress={() => setFilterType(f.key)}
-                                    >
+                <FilterPills
+                    filters={FILTERS}
+                    activeFilter={filterType}
+                    onFilterChange={(k) => setFilterType(k as FilterType)}
+                />
+
+                <ScrollView
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={colors.primary}
+                            colors={[colors.primary]}
+                        />
+                    }
+                >
+                    {filteredTransactions.length === 0 ? (
+                        <EmptyState
+                            icon={Inbox}
+                            message="No hay movimientos"
+                        />
+                    ) : (
+                        Array.from(grouped.entries()).map(
+                            ([label, txs]) => (
+                                <AnimatedSection
+                                    key={label}
+                                    delay={0}
+                                    duration={400}
+                                >
+                                    <View style={{ marginBottom: 24 }}>
                                         <Text
                                             style={{
                                                 fontFamily: "Inter",
                                                 fontSize: 13,
                                                 fontWeight: "600",
-                                                color: active
-                                                    ? colors.background
-                                                    : colors.onSurfaceVariant,
+                                                color: colors.onSurfaceVariant,
+                                                marginBottom: 12,
+                                                paddingHorizontal: 20,
                                             }}
                                         >
-                                            {f.label}
+                                            {label}
                                         </Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    </ScrollView>
-                </View>
 
-                {/* Transaction Groups */}
-                <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-                    {filteredTransactions.length === 0 ? (
-                        <View style={{ alignItems: "center", marginTop: 64 }}>
-                            <Inbox size={48} color="#888888" />
-                            <Text
-                                style={{
-                                    fontFamily: "Inter",
-                                    fontSize: 15,
-                                    color: "#888888",
-                                    marginTop: 12,
-                                }}
-                            >
-                                No hay movimientos
-                            </Text>
-                        </View>
-                    ) : (
-                        Array.from(grouped.entries()).map(([label, txs]) => (
-                            <View key={label} style={{ marginBottom: 24 }}>
-                                <Text
-                                    style={{
-                                        fontFamily: "Inter",
-                                        fontSize: 13,
-                                        fontWeight: "600",
-                                        color: colors.onSurfaceVariant,
-                                        marginBottom: 12,
-                                        paddingHorizontal: 20,
-                                    }}
-                                >
-                                    {label}
-                                </Text>
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            colors.surfaceContainer,
-                                        borderRadius: 12,
-                                        marginHorizontal: 20,
-                                    }}
-                                >
-                                    {txs.map((tx, index) => {
-                                        const cat = getCategoryInfo(
-                                            tx.categoryId,
-                                        );
-                                        const isExpense = tx.type === "expense";
-                                        const time = "14:30";
-                                        return (
-                                            <SwipeableTransactionRow
-                                                key={tx.id}
-                                                transactionId={tx.id}
-                                                onEdit={() =>
-                                                    openSheet(tx.type, tx)
-                                                }
-                                                onDelete={
-                                                    removeTransaction
-                                                }
-                                            >
-                                                <Pressable
-                                                    onPress={() =>
-                                                        router.push({
-                                                            pathname:
-                                                                "/add-transaction",
-                                                            params: { id: tx.id },
-                                                        })
-                                                    }
-                                                    style={({ pressed }) => ({
-                                                        flexDirection: "row",
-                                                        alignItems: "center",
-                                                        padding: 16,
-                                                        borderBottomWidth:
-                                                            index < txs.length - 1
-                                                                ? 1
-                                                                : 0,
-                                                        borderBottomColor:
-                                                            colors.glassBorder,
-                                                        backgroundColor: pressed
-                                                            ? `${colors.primary}1A`
-                                                            : "transparent",
-                                                    })}
-                                                >
-                                                    <View
-                                                        style={{
-                                                            width: 48,
-                                                            height: 48,
-                                                            borderRadius: 8,
-                                                            backgroundColor:
-                                                                cat?.color
-                                                                    ? `${cat.color}20`
-                                                                    : `${colors.primary}33`,
-                                                            alignItems: "center",
-                                                            justifyContent:
-                                                                "center",
-                                                            marginRight: 16,
-                                                        }}
+                                        <View
+                                            style={{
+                                                backgroundColor:
+                                                    colors.surfaceContainer,
+                                                borderRadius: 12,
+                                                marginHorizontal: 20,
+                                            }}
+                                        >
+                                            {txs.map(
+                                                (tx, index) => (
+                                                    <AnimatedSection
+                                                        key={tx.id}
+                                                        delay={
+                                                            index * 80
+                                                        }
+                                                        duration={
+                                                            400
+                                                        }
                                                     >
-                                                        <CategoryIcon
-                                                            name={
-                                                                cat?.icon ??
-                                                                "circle-question-mark"
+                                                        <SwipeableTransactionRow
+                                                            transactionId={
+                                                                tx.id
                                                             }
-                                                            size={20}
-                                                            color={cat?.color}
-                                                        />
-                                                    </View>
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text
-                                                            style={{
-                                                                fontFamily: "Inter",
-                                                                fontSize: 15,
-                                                                fontWeight: "600",
-                                                                color: colors.onSurface,
-                                                            }}
+                                                            onEdit={
+                                                                handleEditTransaction
+                                                            }
+                                                            onDelete={
+                                                                handleDeleteTransaction
+                                                            }
                                                         >
-                                                            {tx.description}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                fontFamily: "Inter",
-                                                                fontSize: 13,
-                                                                color: colors.onSurfaceVariant,
-                                                                marginTop: 2,
-                                                            }}
-                                                        >
-                                                            {cat?.name ||
-                                                                "Sin categoría"}{" "}
-                                                            • {time}
-                                                        </Text>
-                                                    </View>
-                                                    <Text
-                                                        style={{
-                                                            fontFamily: "Inter",
-                                                            fontSize: 15,
-                                                            fontWeight: "600",
-                                                            color: isExpense
-                                                                ? colors.error
-                                                                : colors.primary,
-                                                            fontVariant: [
-                                                                "tabular-nums",
-                                                            ],
-                                                        }}
-                                                    >
-                                                        {isExpense ? "-" : "+"}
-                                                        {formatCurrency(tx.amount)}
-                                                    </Text>
-                                                </Pressable>
-                                            </SwipeableTransactionRow>
-                                        );
-                                    })}
-                                </View>
-                            </View>
-                        ))
+                                                            <TransactionRow
+                                                                tx={
+                                                                    tx
+                                                                }
+                                                                category={getCategoryInfo(
+                                                                    tx.categoryId,
+                                                                )}
+                                                                onPress={() =>
+                                                                    openSheet(
+                                                                        tx.type,
+                                                                        tx,
+                                                                    )
+                                                                }
+                                                            />
+                                                        </SwipeableTransactionRow>
+                                                    </AnimatedSection>
+                                                ),
+                                            )}
+                                        </View>
+                                    </View>
+                                </AnimatedSection>
+                            ),
+                        )
                     )}
                 </ScrollView>
             </View>
 
-            {/* FAB */}
-            <Pressable
-                style={{
-                    position: "absolute",
-                    bottom: 24,
-                    right: 24,
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    backgroundColor: colors.primary,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 6,
-                    zIndex: 30,
-                }}
+            <FloatingAddButton
                 onPress={() => router.push("/add-transaction")}
-            >
-                <Plus size={24} color={colors.background} strokeWidth={2.5} />
-            </Pressable>
+            />
         </View>
     );
 }
