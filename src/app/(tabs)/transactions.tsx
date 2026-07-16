@@ -1,11 +1,12 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
+import { useSheetStore } from "@/store/sheet-store";
 import { useCategoryStore } from "@/store/category-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { Transaction, TransactionType } from "@/types";
 import { router } from "expo-router";
 import { Inbox, Plus, Search } from "lucide-react-native/icons";
-import { showAlert } from '@/store/alert-store';
 import { useCallback, useMemo, useState } from "react";
 import {
     Pressable,
@@ -48,6 +49,7 @@ export default function TransactionsScreen() {
     const transactions = useTransactionStore((s) => s.transactions);
     const removeTransaction = useTransactionStore((s) => s.removeTransaction);
     const categories = useCategoryStore((s) => s.categories);
+    const openSheet = useSheetStore((s) => s.openSheet);
     const [filterType, setFilterType] = useState<FilterType>("all");
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -84,27 +86,10 @@ export default function TransactionsScreen() {
         return map;
     }, [filteredTransactions]);
 
-    const handleDelete = (tx: Transaction) => {
-        const category = getCategoryInfo(tx.categoryId);
-        showAlert(
-            "Eliminar movimiento",
-            `¿Eliminar ${tx.description || category?.name || "este movimiento"} por ${formatCurrency(tx.amount)}?`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Eliminar",
-                    style: "destructive",
-                    onPress: () => removeTransaction(tx.id),
-                },
-            ],
-            'trash',
-        );
-    };
-
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             {/* Content Container */}
-            <View style={{ flex: 1, paddingTop: 116 }}>
+            <View style={{ flex: 1, paddingTop: 42 }}>
                 {/* Search Bar */}
                 <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
                     <View
@@ -228,7 +213,6 @@ export default function TransactionsScreen() {
                                             colors.surfaceContainer,
                                         borderRadius: 12,
                                         marginHorizontal: 20,
-                                        overflow: "hidden",
                                     }}
                                 >
                                     {txs.map((tx, index) => {
@@ -238,98 +222,105 @@ export default function TransactionsScreen() {
                                         const isExpense = tx.type === "expense";
                                         const time = "14:30";
                                         return (
-                                            <Pressable
+                                            <SwipeableTransactionRow
                                                 key={tx.id}
-                                                onLongPress={() =>
-                                                    handleDelete(tx)
+                                                transactionId={tx.id}
+                                                onEdit={() =>
+                                                    openSheet(tx.type, tx)
                                                 }
-                                                onPress={() =>
-                                                    router.push({
-                                                        pathname:
-                                                            "/add-transaction",
-                                                        params: { id: tx.id },
-                                                    })
+                                                onDelete={
+                                                    removeTransaction
                                                 }
-                                                style={({ pressed }) => ({
-                                                    flexDirection: "row",
-                                                    alignItems: "center",
-                                                    padding: 16,
-                                                    borderBottomWidth:
-                                                        index < txs.length - 1
-                                                            ? 1
-                                                            : 0,
-                                                    borderBottomColor:
-                                                        colors.glassBorder,
-                                                    backgroundColor: pressed
-                                                        ? `${colors.primary}1A`
-                                                        : "transparent",
-                                                })}
                                             >
-                                                <View
-                                                    style={{
-                                                        width: 48,
-                                                        height: 48,
-                                                        borderRadius: 8,
-                                                        backgroundColor:
-                                                            cat?.color
-                                                                ? `${cat.color}20`
-                                                                : `${colors.primary}33`,
+                                                <Pressable
+                                                    onPress={() =>
+                                                        router.push({
+                                                            pathname:
+                                                                "/add-transaction",
+                                                            params: { id: tx.id },
+                                                        })
+                                                    }
+                                                    style={({ pressed }) => ({
+                                                        flexDirection: "row",
                                                         alignItems: "center",
-                                                        justifyContent:
-                                                            "center",
-                                                        marginRight: 16,
-                                                    }}
+                                                        padding: 16,
+                                                        borderBottomWidth:
+                                                            index < txs.length - 1
+                                                                ? 1
+                                                                : 0,
+                                                        borderBottomColor:
+                                                            colors.glassBorder,
+                                                        backgroundColor: pressed
+                                                            ? `${colors.primary}1A`
+                                                            : "transparent",
+                                                    })}
                                                 >
-                                                    <CategoryIcon
-                                                        name={
-                                                            cat?.icon ??
-                                                            "circle-question-mark"
-                                                        }
-                                                        size={20}
-                                                        color={cat?.color}
-                                                    />
-                                                </View>
-                                                <View style={{ flex: 1 }}>
+                                                    <View
+                                                        style={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 8,
+                                                            backgroundColor:
+                                                                cat?.color
+                                                                    ? `${cat.color}20`
+                                                                    : `${colors.primary}33`,
+                                                            alignItems: "center",
+                                                            justifyContent:
+                                                                "center",
+                                                            marginRight: 16,
+                                                        }}
+                                                    >
+                                                        <CategoryIcon
+                                                            name={
+                                                                cat?.icon ??
+                                                                "circle-question-mark"
+                                                            }
+                                                            size={20}
+                                                            color={cat?.color}
+                                                        />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text
+                                                            style={{
+                                                                fontFamily: "Inter",
+                                                                fontSize: 15,
+                                                                fontWeight: "600",
+                                                                color: colors.onSurface,
+                                                            }}
+                                                        >
+                                                            {tx.description}
+                                                        </Text>
+                                                        <Text
+                                                            style={{
+                                                                fontFamily: "Inter",
+                                                                fontSize: 13,
+                                                                color: colors.onSurfaceVariant,
+                                                                marginTop: 2,
+                                                            }}
+                                                        >
+                                                            {cat?.name ||
+                                                                "Sin categoría"}{" "}
+                                                            • {time}
+                                                        </Text>
+                                                    </View>
                                                     <Text
                                                         style={{
                                                             fontFamily: "Inter",
                                                             fontSize: 15,
                                                             fontWeight: "600",
-                                                            color: colors.onSurface,
+                                                            color: isExpense
+                                                                ? colors.error
+                                                                : colors.primary,
+                                                            fontVariant: [
+                                                                "tabular-nums",
+                                                            ],
                                                         }}
                                                     >
-                                                        {tx.description}
+                                                        {isExpense ? "-" : "+"}
+                                                        {formatCurrency(tx.amount)}
                                                     </Text>
-                                                    <Text
-                                                        style={{
-                                                            fontFamily: "Inter",
-                                                            fontSize: 13,
-                                                            color: colors.onSurfaceVariant,
-                                                            marginTop: 2,
-                                                        }}
-                                                    >
-                                                        {cat?.name ||
-                                                            "Sin categoría"}{" "}
-                                                        • {time}
-                                                    </Text>
-                                                </View>
-                                                <Text
-                                                    style={{
-                                                        fontFamily: "Inter",
-                                                        fontSize: 15,
-                                                        fontWeight: "600",
-                                                        color: isExpense
-                                                            ? colors.error
-                                                            : colors.primary,
-                                                        fontVariant: [
-                                                            "tabular-nums",
-                                                        ],
-                                                    }}
-                                                >
-                                                    {isExpense ? "-" : "+"}
-                                                    {formatCurrency(tx.amount)}
-                                                </Text>
-                                            </Pressable>
+                                                </Pressable>
+                                            </SwipeableTransactionRow>
                                         );
                                     })}
                                 </View>
