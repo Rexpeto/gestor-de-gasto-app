@@ -49,6 +49,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       category_id INTEGER NOT NULL,
       description TEXT DEFAULT '',
       date TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'bsc',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -126,6 +127,19 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     `);
     await database.runAsync(
       'INSERT OR REPLACE INTO _migrations (version) VALUES (5)'
+    );
+  }
+
+  // Migration v6: add currency column to transactions
+  const currentVersionV6 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV6?.version || currentVersionV6.version < 6) {
+    await database.execAsync(`
+      ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'bsc'
+    `);
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (6)'
     );
   }
 }
@@ -258,6 +272,7 @@ export async function getAllTransactions(): Promise<Transaction[]> {
     category_id: number;
     description: string;
     date: string;
+    currency: string;
     created_at: string;
   }>(
     'SELECT t.* FROM transactions t ORDER BY t.date DESC, t.created_at DESC'
@@ -279,6 +294,7 @@ export async function getTransactionsByMonth(
     category_id: number;
     description: string;
     date: string;
+    currency: string;
     created_at: string;
   }>(
     "SELECT t.* FROM transactions t WHERE t.date LIKE ? ORDER BY t.date DESC, t.created_at DESC",
@@ -294,11 +310,12 @@ export async function createTransaction(params: {
   categoryId: number;
   description: string;
   date: string;
+  currency?: string;
 }): Promise<Transaction> {
   const database = await getDatabase();
   const result = await database.runAsync(
-    'INSERT INTO transactions (amount, type, category_id, description, date) VALUES (?, ?, ?, ?, ?)',
-    [params.amount, params.type, params.categoryId, params.description, params.date]
+    'INSERT INTO transactions (amount, type, category_id, description, date, currency) VALUES (?, ?, ?, ?, ?, ?)',
+    [params.amount, params.type, params.categoryId, params.description, params.date, params.currency ?? 'bsc']
   );
 
   const row = await database.getFirstAsync<{
@@ -308,6 +325,7 @@ export async function createTransaction(params: {
     category_id: number;
     description: string;
     date: string;
+    currency: string;
     created_at: string;
   }>('SELECT * FROM transactions WHERE id = ?', [result.lastInsertRowId]);
 
@@ -323,6 +341,7 @@ export async function updateTransaction(
     categoryId: number;
     description: string;
     date: string;
+    currency?: string;
   }>
 ): Promise<void> {
   const database = await getDatabase();
@@ -351,6 +370,10 @@ export async function updateTransaction(
   if (params.date !== undefined) {
     sets.push('date = ?');
     bindings.push(params.date);
+  }
+  if (params.currency !== undefined) {
+    sets.push('currency = ?');
+    bindings.push(params.currency);
   }
 
   bindings.push(id);
@@ -650,6 +673,7 @@ function mapTransaction(row: {
   category_id: number;
   description: string;
   date: string;
+  currency: string;
   created_at: string;
 }): Transaction {
   return {
@@ -659,6 +683,7 @@ function mapTransaction(row: {
     categoryId: row.category_id,
     description: row.description ?? '',
     date: row.date,
+    currency: row.currency,
     createdAt: row.created_at,
   };
 }
@@ -703,6 +728,7 @@ export async function resetDatabase(): Promise<void> {
       category_id INTEGER NOT NULL,
       description TEXT DEFAULT '',
       date TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'bsc',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -786,6 +812,7 @@ export interface ExportData {
     description: string;
     date: string;
     createdAt: string;
+    currency?: string; // optional for backward-compatible exports
   }>;
   monthlyRates: Array<{
     month: number;
@@ -821,6 +848,7 @@ export async function exportDatabase(): Promise<string> {
     category_id: number;
     description: string;
     date: string;
+    currency: string;
     created_at: string;
   }>('SELECT * FROM transactions ORDER BY id');
 
@@ -860,6 +888,7 @@ export async function exportDatabase(): Promise<string> {
       description: t.description ?? '',
       date: t.date,
       createdAt: t.created_at,
+      currency: t.currency,
     })),
     monthlyRates: monthlyRates.map((r) => ({
       month: r.month,
@@ -907,8 +936,8 @@ export async function importDatabase(json: string): Promise<void> {
     const categoryId = catNameToId.get(tx.categoryName);
     if (!categoryId) continue; // skip if category not found
     await database.runAsync(
-      'INSERT INTO transactions (amount, type, category_id, description, date, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.createdAt],
+      'INSERT INTO transactions (amount, type, category_id, description, date, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.currency ?? 'bsc', tx.createdAt],
     );
   }
 

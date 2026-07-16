@@ -82,6 +82,7 @@ export default function AddTransactionScreen() {
     setCategoryId(tx.categoryId);
     setDescription(tx.description);
     setDate(tx.date);
+    setPaymentMethod(tx.currency || 'bsc');
   }, [id, isEditing, transactions]);
 
   const filteredCategories = useMemo(
@@ -130,6 +131,7 @@ export default function AddTransactionScreen() {
           categoryId,
           description,
           date,
+          currency: paymentMethod,
         });
       } else {
         await addTransaction({
@@ -138,6 +140,7 @@ export default function AddTransactionScreen() {
           categoryId,
           description,
           date,
+          currency: paymentMethod,
         });
       }
       showSuccessToast('Transacción guardada');
@@ -147,7 +150,7 @@ export default function AddTransactionScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, categoryId, date, description, editTransaction, id, isEditing, addTransaction, txType]);
+  }, [amount, categoryId, date, description, paymentMethod, editTransaction, id, isEditing, addTransaction, txType]);
 
   const displayAmount = amount === '' ? '0' : amount;
 

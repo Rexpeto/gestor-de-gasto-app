@@ -12,6 +12,7 @@ import { showErrorToast, showSuccessToast } from "@/components/ThemedToast";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
 import { useThemeColors } from "@/store/theme-store";
+import { useTransactionStore } from "@/store/transaction-store";
 
 const MONTHS = [
     "Enero",
@@ -202,6 +203,12 @@ export default function FiscalScreen() {
                     continue;
                 await setRates(m, year, { p2pRate, bcvUsdRate, bcvEurRate });
             }
+
+            // Reload summaries so dashboard reflects converted amounts
+            await Promise.all([
+                useTransactionStore.getState().loadMonthlySummary(),
+                useTransactionStore.getState().loadCategorySummaries(),
+            ]);
 
             showSuccessToast("Configuración guardada correctamente");
         } catch (e) {

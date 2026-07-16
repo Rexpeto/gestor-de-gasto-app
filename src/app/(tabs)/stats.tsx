@@ -5,12 +5,31 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { GlassPieChart } from '@/components/GlassPieChart';
-import { getMonthlySummary } from '@/db/database';
+import * as db from '@/db/database';
 import { useCategoryStore } from '@/store/category-store';
 import { usePreferencesStore } from '@/store/preferences-store';
+import { useRateStore } from '@/store/rate-store';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/**
+ * Converts a transaction amount to USDT equivalent.
+ * Same logic as in transaction-store.ts
+ */
+function toUsdtEquivalent(
+  amount: number,
+  currency: string,
+  rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null,
+): number {
+  if (!rates || rates.p2pRate <= 0) return amount;
+  if (currency === 'usdt') return amount;
+  if (currency === 'bsc' && rates.bcvUsdRate > 0)
+    return amount * (rates.bcvUsdRate / rates.p2pRate);
+  if (currency === 'eur' && rates.bcvEurRate > 0)
+    return amount * (rates.bcvEurRate / rates.p2pRate);
+  return amount;
+}
 
 type Period = 'weekly' | 'monthly' | 'yearly';
 
@@ -58,14 +77,24 @@ export default function StatsScreen() {
   useEffect(() => {
     (async () => {
       const now = new Date();
-      let lm = now.getMonth(); // 0-indexed: current month (e.g. 6 = July)
+      let lm = now.getMonth() + 1; // 1-indexed
       let ly = now.getFullYear();
-      if (lm === 0) {
+      if (lm === 1) {
         lm = 12;
         ly -= 1;
+      } else {
+        lm -= 1;
       }
-      const result = await getMonthlySummary(ly, lm);
-      setLastMonthExpense(result.totalExpense);
+      // Fetch last month's transactions and convert to USDT equivalent
+      const txs = await db.getTransactionsByMonth(ly, lm);
+      // Rate store uses 0-indexed months, but lm is 1-indexed
+      const rates = useRateStore.getState().getRates(lm - 1, ly);
+      let total = 0;
+      for (const tx of txs) {
+        const usdtAmount = toUsdtEquivalent(tx.amount, tx.currency, rates);
+        total += usdtAmount;
+      }
+      setLastMonthExpense(total);
     })();
   }, []);
 

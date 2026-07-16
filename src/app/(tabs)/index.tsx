@@ -1,12 +1,13 @@
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Action } from "@/components/Action";
 import { AnimatedProgressBar } from "@/components/AnimatedProgressBar";
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CreditCard } from "@/components/CreditCard";
+import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
@@ -22,10 +23,16 @@ import {
 } from "lucide-react-native/icons";
 
 const formatCurrency = (amount: number): string =>
-    `$${Math.abs(amount).toLocaleString("es-ES", {
+    `${Math.abs(amount).toLocaleString("es-ES", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })}`;
+
+const CURRENCY_LABELS: Record<string, string> = {
+    bsc: "$",
+    usdt: "USDT",
+    eur: "€",
+};
 
 const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr + "T00:00:00");
@@ -99,6 +106,7 @@ export function TransactionRow({
                     }}
                 >
                     {tx.type === "income" ? "+ " : "- "}
+                    {CURRENCY_LABELS[tx.currency] ?? tx.currency}{" "}
                     {formatCurrency(tx.amount)}
                 </Text>
             </View>
@@ -170,6 +178,27 @@ export default function DashboardScreen() {
         [categorySummaries],
     );
 
+    const removeTransaction = useTransactionStore((s) => s.removeTransaction);
+
+    const handleEditTransaction = useCallback(
+        (transactionId: number) => {
+            const tx = transactions.find((t) => t.id === transactionId);
+            if (tx) openSheet(tx.type, tx);
+        },
+        [transactions, openSheet],
+    );
+
+    const handleDeleteTransaction = useCallback(
+        async (transactionId: number) => {
+            try {
+                await removeTransaction(transactionId);
+            } catch {
+                Alert.alert("Error", "No se pudo eliminar la transacción");
+            }
+        },
+        [removeTransaction],
+    );
+
     const [refreshing, setRefreshing] = useState(false);
 
     const onRefresh = useCallback(async () => {
@@ -239,136 +268,8 @@ export default function DashboardScreen() {
                     </AnimatedSection>
                 </View>
 
-                {/* ── Gastos por Categoría ── */}
-                {topExpenseCategories.length > 0 && (
-                    <AnimatedSection delay={400} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                marginBottom: 12,
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontFamily: "Inter",
-                                    fontSize: 16,
-                                    fontWeight: "600",
-                                    color: colors.onSurface,
-                                }}
-                            >
-                                Gastos por Categoría
-                            </Text>
-                            <Pressable
-                                onPress={() =>
-                                    router.push("/(tabs)/transactions")
-                                }
-                            >
-                                <Text
-                                    style={{
-                                        fontFamily: "Inter",
-                                        fontSize: 13,
-                                        fontWeight: "500",
-                                        color: colors.primary,
-                                    }}
-                                >
-                                    Ver todo
-                                </Text>
-                            </Pressable>
-                        </View>
-
-                        <View
-                            style={{
-                                backgroundColor: colors.glassSurface,
-                                borderWidth: 1,
-                                borderColor: colors.glassBorder,
-                                borderRadius: 12,
-                                padding: 16,
-                                gap: 16,
-                            }}
-                        >
-                            {topExpenseCategories.map((cat, index) => (
-                                <AnimatedSection key={cat.categoryId} delay={500 + index * 120} duration={500} distance={16}>
-                                    <View
-                                        style={{
-                                            flexDirection: "row",
-                                            alignItems: "center",
-                                            gap: 12,
-                                        }}
-                                    >
-                                        {/* Icon circle */}
-                                        <View
-                                            style={{
-                                                width: 40,
-                                                height: 40,
-                                                borderRadius: 9999,
-                                                backgroundColor:
-                                                    (cat.categoryColor ||
-                                                        "#6366f1") + "20",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                            }}
-                                        >
-                                            <CategoryIcon
-                                                name={cat.categoryIcon}
-                                                size={18}
-                                                color={cat.categoryColor}
-                                            />
-                                        </View>
-
-                                        {/* Name + amounts */}
-                                        <View style={{ flex: 1 }}>
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    justifyContent:
-                                                        "space-between",
-                                                    alignItems: "center",
-                                                    marginBottom: 6,
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontFamily: "Inter",
-                                                        fontSize: 14,
-                                                        fontWeight: "500",
-                                                        color: colors.onSurface,
-                                                    }}
-                                                >
-                                                    {cat.categoryName}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        fontFamily: "Inter",
-                                                        fontSize: 14,
-                                                        fontWeight: "600",
-                                                        color: colors.onSurface,
-                                                    }}
-                                                >
-                                                    {formatCurrency(cat.total)}
-                                                </Text>
-                                            </View>
-
-                                            <AnimatedProgressBar
-                                                percentage={cat.percentage}
-                                                color={cat.categoryColor || colors.primary}
-                                                trackColor={colors.glassBorderStrong}
-                                                delay={600 + index * 120}
-                                                duration={700}
-                                                height={6}
-                                                radius={9999}
-                                            />
-                                        </View>
-                                    </View>
-                                </AnimatedSection>
-                            ))}
-                        </View>
-                    </AnimatedSection>
-                )}
-
                 {/* ── Transacciones Recientes ── */}
-                <AnimatedSection delay={700} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
+                <AnimatedSection delay={400} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
                     <View
                         style={{
                             flexDirection: "row",
@@ -398,7 +299,7 @@ export default function DashboardScreen() {
                     </View>
 
                     {isLoading ? (
-                        <AnimatedSection delay={900} duration={400}>
+                        <AnimatedSection delay={600} duration={400}>
                             <View
                                 style={{
                                     paddingVertical: 32,
@@ -416,7 +317,7 @@ export default function DashboardScreen() {
                             </View>
                         </AnimatedSection>
                     ) : recentTransactions.length === 0 ? (
-                        <AnimatedSection delay={900} duration={500}>
+                        <AnimatedSection delay={600} duration={500}>
                             <View
                                 style={{
                                     backgroundColor: colors.glassSurface,
@@ -477,7 +378,7 @@ export default function DashboardScreen() {
                                         tx.categoryId,
                                     );
                                     return (
-                                        <AnimatedSection key={tx.id} delay={800 + index * 120} duration={500} distance={20}>
+                                        <AnimatedSection key={tx.id} delay={500 + index * 120} duration={500} distance={20}>
                                             {index > 0 && (
                                                 <View
                                                     style={{
@@ -488,17 +389,19 @@ export default function DashboardScreen() {
                                                     }}
                                                 />
                                             )}
-                                            <TransactionRow
-                                                tx={tx}
-                                                category={category}
-                                                onPress={() =>
-                                                    router.push({
-                                                        pathname:
-                                                            "/add-transaction",
-                                                        params: { id: tx.id },
-                                                    })
-                                                }
-                                            />
+                                            <SwipeableTransactionRow
+                                                transactionId={tx.id}
+                                                onEdit={handleEditTransaction}
+                                                onDelete={handleDeleteTransaction}
+                                            >
+                                                <TransactionRow
+                                                    tx={tx}
+                                                    category={category}
+                                                    onPress={() =>
+                                                        openSheet(tx.type, tx)
+                                                    }
+                                                />
+                                            </SwipeableTransactionRow>
                                         </AnimatedSection>
                                     );
                                 },
@@ -506,6 +409,134 @@ export default function DashboardScreen() {
                         </View>
                     )}
                 </AnimatedSection>
+
+                {/* ── Gastos por Categoría ── */}
+                {topExpenseCategories.length > 0 && (
+                    <AnimatedSection delay={700} duration={600} style={{ marginTop: 28, paddingHorizontal: 20 }}>
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 12,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: "Inter",
+                                    fontSize: 16,
+                                    fontWeight: "600",
+                                    color: colors.onSurface,
+                                }}
+                            >
+                                Gastos por Categoría
+                            </Text>
+                            <Pressable
+                                onPress={() =>
+                                    router.push("/(tabs)/transactions")
+                                }
+                            >
+                                <Text
+                                    style={{
+                                        fontFamily: "Inter",
+                                        fontSize: 13,
+                                        fontWeight: "500",
+                                        color: colors.primary,
+                                    }}
+                                >
+                                    Ver todo
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        <View
+                            style={{
+                                backgroundColor: colors.glassSurface,
+                                borderWidth: 1,
+                                borderColor: colors.glassBorder,
+                                borderRadius: 12,
+                                padding: 16,
+                                gap: 16,
+                            }}
+                        >
+                            {topExpenseCategories.map((cat, index) => (
+                                <AnimatedSection key={cat.categoryId} delay={800 + index * 120} duration={500} distance={16}>
+                                    <View
+                                        style={{
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: 12,
+                                        }}
+                                    >
+                                        {/* Icon circle */}
+                                        <View
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 9999,
+                                                backgroundColor:
+                                                    (cat.categoryColor ||
+                                                        "#6366f1") + "20",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                            }}
+                                        >
+                                            <CategoryIcon
+                                                name={cat.categoryIcon}
+                                                size={18}
+                                                color={cat.categoryColor}
+                                            />
+                                        </View>
+
+                                        {/* Name + amounts */}
+                                        <View style={{ flex: 1 }}>
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    alignItems: "center",
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily: "Inter",
+                                                        fontSize: 14,
+                                                        fontWeight: "500",
+                                                        color: colors.onSurface,
+                                                    }}
+                                                >
+                                                    {cat.categoryName}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontFamily: "Inter",
+                                                        fontSize: 14,
+                                                        fontWeight: "600",
+                                                        color: colors.onSurface,
+                                                    }}
+                                                >
+                                                    ${formatCurrency(cat.total)}
+                                                </Text>
+                                            </View>
+
+                                            <AnimatedProgressBar
+                                                percentage={cat.percentage}
+                                                color={cat.categoryColor || colors.primary}
+                                                trackColor={colors.glassBorderStrong}
+                                                delay={900 + index * 120}
+                                                duration={700}
+                                                height={6}
+                                                radius={9999}
+                                            />
+                                        </View>
+                                    </View>
+                                </AnimatedSection>
+                            ))}
+                        </View>
+                    </AnimatedSection>
+                )}
             </ScrollView>
         </View>
     );

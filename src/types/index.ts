@@ -15,6 +15,7 @@ export interface Transaction {
   categoryId: number;
   description: string;
   date: string; // ISO 8601 (YYYY-MM-DD)
+  currency: string;
   createdAt: string;
 }
 
@@ -24,6 +25,7 @@ export interface TransactionFormData {
   categoryId: number;
   description: string;
   date: string;
+  currency?: string;
 }
 
 export interface MonthlySummary {

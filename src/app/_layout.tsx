@@ -56,12 +56,14 @@ export default function RootLayout() {
           console.warn('⚠️ Inter not loaded, using system font');
         });
 
+        // Load rates first so summaries can use them for currency conversion
+        await loadRates();
+
         await Promise.all([
           loadCategories(),
           loadTransactions(),
           loadMonthlySummary(),
           loadCategorySummaries(),
-          loadRates(),
           loadPreferences(),
         ]);
       } catch (e) {

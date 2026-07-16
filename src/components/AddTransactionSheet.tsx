@@ -6,6 +6,7 @@ import { NumericKeyboard } from '@/components/NumericKeyboard';
 import { PaymentMethodPicker } from '@/components/PaymentMethodPicker';
 import { showErrorToast, showSuccessToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
+import { useSheetStore } from '@/store/sheet-store';
 import { useThemeColors } from '@/store/theme-store';
 import { useTransactionStore } from '@/store/transaction-store';
 import type { TransactionType } from '@/types';
@@ -50,7 +51,9 @@ export const AddTransactionSheet = ({
   const sheetRef = useRef<BottomSheet>(null);
 
   const addTransaction = useTransactionStore((s) => s.addTransaction);
+  const editTransaction = useTransactionStore((s) => s.editTransaction);
   const categories = useCategoryStore((s) => s.categories);
+  const editingTransaction = useSheetStore((s) => s.editingTransaction);
 
   const [txType, setTxType] = useState<TransactionType>(
     initialType ?? 'expense',
@@ -65,34 +68,59 @@ export const AddTransactionSheet = ({
   const [contentKey, setContentKey] = useState(0);
   const colors = useThemeColors();
 
-  // Control sheet visibility via ref methods
+  const isEditing = editingTransaction !== null;
+
+  // Control sheet visibility + pre-fill form in edit mode
   useEffect(() => {
     if (isOpen) {
-      setTxType(initialType ?? 'expense');
-      setAmount('');
-      setCategoryId(null);
-      setDescription('');
-      setSelectedDate(new Date());
-      setShowDatePicker(false);
-      setPaymentMethod('bsc');
-      setIsSubmitting(false);
+      if (editingTransaction) {
+        // ── Edit mode: pre-fill ──
+        setTxType(editingTransaction.type);
+        setAmount(String(editingTransaction.amount));
+        setCategoryId(editingTransaction.categoryId);
+        setDescription(editingTransaction.description);
+        setSelectedDate(new Date(editingTransaction.date + 'T00:00:00'));
+        setShowDatePicker(false);
+        setPaymentMethod(editingTransaction.currency || 'bsc');
+        setIsSubmitting(false);
+      } else {
+        // ── Create mode: reset ──
+        setTxType(initialType ?? 'expense');
+        setAmount('');
+        setCategoryId(null);
+        setDescription('');
+        setSelectedDate(new Date());
+        setShowDatePicker(false);
+        setPaymentMethod('bsc');
+        setIsSubmitting(false);
+      }
       setContentKey((k) => k + 1);
-      // Use setTimeout to ensure state updates are flushed before opening
       setTimeout(() => {
         sheetRef.current?.snapToIndex(0);
       }, 50);
     } else {
       sheetRef.current?.close();
     }
-  }, [isOpen, initialType]);
+  }, [isOpen, initialType, editingTransaction]);
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => c.type === txType),
     [categories, txType],
   );
 
-  const title = txType === 'income' ? 'Nuevo Ingreso' : 'Nuevo Gasto';
-  const saveLabel = txType === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto';
+  const title = isEditing
+    ? txType === 'income'
+      ? 'Editar Ingreso'
+      : 'Editar Gasto'
+    : txType === 'income'
+      ? 'Nuevo Ingreso'
+      : 'Nuevo Gasto';
+
+  const saveLabel = isEditing
+    ? 'Actualizar'
+    : txType === 'income'
+      ? 'Guardar Ingreso'
+      : 'Guardar Gasto';
 
   const handleKeyPress = useCallback((key: string) => {
     setAmount((prev) => {
@@ -123,21 +151,45 @@ export const AddTransactionSheet = ({
     setIsSubmitting(true);
     try {
       const dateISO = selectedDate.toISOString().split('T')[0];
-      await addTransaction({
-        amount: amountNum,
-        type: txType,
-        categoryId,
-        description,
-        date: dateISO,
-      });
-      showSuccessToast('Transacción guardada');
+      if (editingTransaction) {
+        await editTransaction(editingTransaction.id, {
+          amount: amountNum,
+          type: txType,
+          categoryId,
+          description,
+          date: dateISO,
+          currency: paymentMethod,
+        });
+        showSuccessToast('Transacción actualizada');
+      } else {
+        await addTransaction({
+          amount: amountNum,
+          type: txType,
+          categoryId,
+          description,
+          date: dateISO,
+          currency: paymentMethod,
+        });
+        showSuccessToast('Transacción guardada');
+      }
       onClose();
     } catch {
       showErrorToast('No se pudo guardar la transacción');
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, categoryId, selectedDate, description, addTransaction, txType, onClose]);
+  }, [
+    amount,
+    categoryId,
+    selectedDate,
+    description,
+    paymentMethod,
+    addTransaction,
+    editTransaction,
+    editingTransaction,
+    txType,
+    onClose,
+  ]);
 
   const handleDateChange = useCallback(
     (_event: DateTimePickerEvent, pickedDate?: Date) => {
