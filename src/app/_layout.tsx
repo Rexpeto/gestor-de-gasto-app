@@ -13,6 +13,7 @@ import ToastMessage from 'react-native-toast-message';
 
 import { HeroUINativeProvider } from 'heroui-native/provider';
 import { AddTransactionSheet } from '@/components/AddTransactionSheet';
+import { AlertDialog } from '@/components/AlertDialog';
 import { toastConfig } from '@/components/ThemedToast';
 
 import { useRateStore } from '@/store/rate-store';
@@ -200,6 +201,9 @@ export default function RootLayout() {
                 initialType={sheetType}
                 onClose={closeSheet}
               />
+
+              {/* AlertDialog personalizado — POR ENCIMA de los tabs */}
+              <AlertDialog />
 
               {/* Toast notifications - POR ENCIMA de todo */}
               <ToastMessage config={toastConfig} />

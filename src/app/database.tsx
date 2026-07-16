@@ -1,31 +1,30 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import * as DocumentPicker from 'expo-document-picker';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
-  TriangleAlert,
-  Trash2,
-  RotateCcw,
-  ChevronLeft,
   Download,
-  Upload,
+  RotateCcw,
+  Trash2,
+  TriangleAlert,
+  Upload
 } from 'lucide-react-native/icons';
 
+import { showErrorToast, showSuccessToast } from '@/components/ThemedToast';
 import {
   deleteDatabase,
-  resetDatabase,
   exportDatabase,
   importDatabase,
+  resetDatabase,
 } from '@/db/database';
-import { showErrorToast, showSuccessToast } from '@/components/ThemedToast';
+import { showAlert } from '@/store/alert-store';
 import { useCategoryStore } from '@/store/category-store';
-import { useTransactionStore } from '@/store/transaction-store';
-import { useRateStore } from '@/store/rate-store';
 import { usePreferencesStore } from '@/store/preferences-store';
+import { useRateStore } from '@/store/rate-store';
 import { useThemeColors } from '@/store/theme-store';
+import { useTransactionStore } from '@/store/transaction-store';
 
 // ─── Danger Button ───────────────────────────────────────────────────────────
 
@@ -66,7 +65,7 @@ function DangerButton({
           marginRight: 16,
         }}
       >
-        <Icon size={22} color={colors.error} />
+        <Icon size={22} color="#fff" />
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -134,7 +133,7 @@ function ActionButton({
           marginRight: 16,
         }}
       >
-        <Icon size={22} color={colors.primary} />
+        <Icon size={22} color={colors.onPrimary} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -184,7 +183,7 @@ export default function DatabaseScreen() {
   };
 
   const handleReset = () => {
-    Alert.alert(
+    showAlert(
       'Restablecer Base de Datos',
       '¿Estás seguro? Se eliminarán todas las transacciones, categorías y configuraciones, y se crearán las categorías por defecto.',
       [
@@ -206,11 +205,12 @@ export default function DatabaseScreen() {
           },
         },
       ],
+      'refresh',
     );
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       'Eliminar Base de Datos',
       '¿Estás seguro? Se eliminará TODO el archivo de la base de datos. La aplicación se reiniciará con datos de fábrica.',
       [
@@ -234,6 +234,7 @@ export default function DatabaseScreen() {
           },
         },
       ],
+      'trash',
     );
   };
 
@@ -268,7 +269,7 @@ export default function DatabaseScreen() {
   };
 
   const handleImport = () => {
-    Alert.alert(
+    showAlert(
       'Importar datos',
       'Esto reemplazará TODOS los datos actuales con los del archivo seleccionado. ¿Continuar?',
       [
@@ -308,6 +309,7 @@ export default function DatabaseScreen() {
           },
         },
       ],
+      'upload',
     );
   };
 
@@ -320,46 +322,6 @@ export default function DatabaseScreen() {
           paddingBottom: 96,
         }}
       >
-        {/* ── Header ── */}
-        <View style={{ marginBottom: 32 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={8}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: `${colors.onSurface}66`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={22} color={colors.onSurface} />
-            </Pressable>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 24,
-                fontWeight: '700',
-                color: colors.onSurface,
-              }}
-            >
-              Base de Datos
-            </Text>
-          </View>
-          <Text
-            style={{
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: colors.onSurfaceVariant,
-              marginLeft: 52,
-            }}
-          >
-            Administración de almacenamiento local
-          </Text>
-        </View>
-
         {/* ── Info card ── */}
         <View
           style={{
@@ -374,7 +336,7 @@ export default function DatabaseScreen() {
           }}
         >
           <View style={{ marginTop: 1 }}>
-            <TriangleAlert size={20} color={colors.error} />
+            <TriangleAlert size={20} color="#fff" />
           </View>
           <Text
             style={{
@@ -400,29 +362,6 @@ export default function DatabaseScreen() {
             overflow: 'hidden',
           }}
         >
-          <View
-            style={{
-              paddingHorizontal: 16,
-              paddingTop: 14,
-              paddingBottom: 10,
-              borderBottomWidth: 1,
-              borderBottomColor: `${colors.onSurface}66`,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 12,
-                fontWeight: '600',
-                letterSpacing: 0.05,
-                textTransform: 'uppercase',
-                color: `${colors.error}D9`,
-              }}
-            >
-              Acciones
-            </Text>
-          </View>
-
           <DangerButton
             icon={RotateCcw}
             label="Restablecer"
@@ -488,182 +427,6 @@ export default function DatabaseScreen() {
               loading={importing}
               colors={colors}
             />
-          </View>
-        </View>
-
-        {/* ── What each does ── */}
-        <View
-          style={{
-            backgroundColor: colors.glassSurface ?? colors.surfaceContainer,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: colors.glassBorderStrong ?? `${colors.outlineVariant}99`,
-            padding: 16,
-            marginTop: 16,
-          }}
-        >
-          <View style={{ flexDirection: 'row', gap: 14, marginBottom: 14 }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: `${colors.primary}99`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <RotateCcw size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.onSurface,
-                  marginBottom: 2,
-                }}
-              >
-                Restablecer
-              </Text>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                  lineHeight: 18,
-                }}
-              >
-                Vuelve a crear las tablas y las categorías desde cero.
-                Los datos existentes se pierden.
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: `${colors.error}99`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Trash2 size={18} color={colors.error} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.onSurface,
-                  marginBottom: 2,
-                }}
-              >
-                Eliminar
-              </Text>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                  lineHeight: 18,
-                }}
-              >
-                Remueve físicamente el archivo .db del dispositivo.
-                Equivalente a empezar desde una instalación limpia.
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={{
-              height: 1,
-              backgroundColor: `${colors.onSurface}66`,
-              marginVertical: 14,
-            }}
-          />
-
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: `${colors.primary}99`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Download size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.onSurface,
-                  marginBottom: 2,
-                }}
-              >
-                Exportar
-              </Text>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                  lineHeight: 18,
-                }}
-              >
-                Guarda una copia de todos los datos en un archivo JSON
-                para respaldo o transferencia.
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: 14, marginTop: 14 }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: `${colors.primary}99`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Upload size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: colors.onSurface,
-                  marginBottom: 2,
-                }}
-              >
-                Importar
-              </Text>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                  lineHeight: 18,
-                }}
-              >
-                Reemplaza los datos actuales con los de un archivo JSON
-                previamente exportado.
-              </Text>
-            </View>
           </View>
         </View>
       </ScrollView>

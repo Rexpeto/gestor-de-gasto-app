@@ -48,7 +48,7 @@ function NavRow({
                         marginRight: 16,
                     }}
                 >
-                    <Icon size={22} color={colors.primary} />
+                    <Icon size={22} color="#fff" />
                 </View>
 
                 <View style={{ flex: 1, marginRight: 8 }}>

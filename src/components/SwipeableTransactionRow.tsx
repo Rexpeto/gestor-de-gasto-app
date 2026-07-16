@@ -1,8 +1,9 @@
 import { useRef } from 'react';
-import { Alert, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Pencil, Trash2 } from 'lucide-react-native/icons';
 
+import { showAlert } from '@/store/alert-store';
 import { useThemeColors } from '@/store/theme-store';
 
 interface SwipeableTransactionRowProps {
@@ -61,7 +62,7 @@ export function SwipeableTransactionRow({
       <Pressable
         onPress={() => {
           swipeableRef.current?.close();
-          Alert.alert(
+          showAlert(
             'Eliminar transacción',
             '¿Eliminar esta transacción? Esta acción no se puede deshacer.',
             [
@@ -72,6 +73,7 @@ export function SwipeableTransactionRow({
                 onPress: () => onDelete(transactionId),
               },
             ],
+            'trash',
           );
         }}
         style={{

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Action } from "@/components/Action";
 import { AnimatedProgressBar } from "@/components/AnimatedProgressBar";
@@ -11,6 +11,7 @@ import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
+import { showAlert } from '@/store/alert-store';
 import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
@@ -193,7 +194,7 @@ export default function DashboardScreen() {
             try {
                 await removeTransaction(transactionId);
             } catch {
-                Alert.alert("Error", "No se pudo eliminar la transacción");
+                showAlert("Error", "No se pudo eliminar la transacción");
             }
         },
         [removeTransaction],

@@ -5,9 +5,9 @@ import { useTransactionStore } from "@/store/transaction-store";
 import type { Transaction, TransactionType } from "@/types";
 import { router } from "expo-router";
 import { Inbox, Plus, Search } from "lucide-react-native/icons";
+import { showAlert } from '@/store/alert-store';
 import { useCallback, useMemo, useState } from "react";
 import {
-    Alert,
     Pressable,
     ScrollView,
     Text,
@@ -86,7 +86,7 @@ export default function TransactionsScreen() {
 
     const handleDelete = (tx: Transaction) => {
         const category = getCategoryInfo(tx.categoryId);
-        Alert.alert(
+        showAlert(
             "Eliminar movimiento",
             `¿Eliminar ${tx.description || category?.name || "este movimiento"} por ${formatCurrency(tx.amount)}?`,
             [
@@ -97,6 +97,7 @@ export default function TransactionsScreen() {
                     onPress: () => removeTransaction(tx.id),
                 },
             ],
+            'trash',
         );
     };
 

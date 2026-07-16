@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FolderOpen, Plus } from 'lucide-react-native/icons';
+import { showAlert } from '@/store/alert-store';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { showErrorToast } from '@/components/ThemedToast';
 import { useCategoryStore } from '@/store/category-store';
@@ -25,7 +26,7 @@ export default function CategoriesScreen() {
   const filteredCategories = categories.filter((c) => c.type === activeTab);
 
   const handleDelete = (cat: Category) => {
-    Alert.alert(
+    showAlert(
       'Eliminar categoría',
       `¿Eliminar "${cat.name}"?`,
       [
@@ -44,6 +45,7 @@ export default function CategoriesScreen() {
           },
         },
       ],
+      'trash',
     );
   };
 
