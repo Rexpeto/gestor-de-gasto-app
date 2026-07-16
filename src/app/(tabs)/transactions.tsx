@@ -5,6 +5,7 @@ import { useCategoryStore } from "@/store/category-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { Transaction, TransactionType } from "@/types";
+import { formatCurrency } from "@/utils/format";
 import { router } from "expo-router";
 import { Inbox, Plus, Search } from "lucide-react-native/icons";
 import { useCallback, useMemo, useState } from "react";
@@ -15,12 +16,6 @@ import {
     TextInput,
     View,
 } from "react-native";
-
-const formatCurrency = (amount: number): string =>
-    `$${Math.abs(amount).toLocaleString("es-ES", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
 
 const getDateLabel = (dateStr: string): string => {
     const date = new Date(dateStr + "T00:00:00");
