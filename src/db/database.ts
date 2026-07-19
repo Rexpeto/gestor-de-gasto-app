@@ -12,17 +12,61 @@ const DB_NAME = 'gestor-gastos.db';
 
 let db: SQLite.SQLiteDatabase | null = null;
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let _reconnectPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+async function _createConnection(): Promise<SQLite.SQLiteDatabase> {
+  const database = await SQLite.openDatabaseAsync(DB_NAME);
+  if (!database) throw new Error('openDatabaseAsync returned null');
+  return database;
+}
+
+/** Wait for native SQLite to fully release the old handle. */
+function _sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function _reconnect(): Promise<SQLite.SQLiteDatabase> {
+  // If a reconnect is already in progress, share it
+  if (_reconnectPromise) return _reconnectPromise;
+
+  _reconnectPromise = (async () => {
+    db = null;
+    dbPromise = null;
+    await _sleep(500);
+    const database = await _createConnection();
+    await runMigrations(database);
+    db = database;
+    dbPromise = Promise.resolve(database);
+    return database;
+  })();
+
+  try {
+    return await _reconnectPromise;
+  } finally {
+    _reconnectPromise = null;
+  }
+}
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = (async () => {
-      const database = await SQLite.openDatabaseAsync(DB_NAME);
+      const database = await _createConnection();
       await runMigrations(database);
       db = database;
       return database;
     })();
   }
-  return dbPromise;
+
+  try {
+    const database = await dbPromise;
+    // Health check: if the native handle is broken (e.g. after closeAsync on Android),
+    // a simple PRAGMA will throw. Detect this and force reconnect.
+    await database.getFirstAsync('PRAGMA journal_mode');
+    return database;
+  } catch {
+    // Connection is dead — reconnect once, all concurrent callers share the same promise
+    return _reconnect();
+  }
 }
 
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -135,9 +179,16 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     'SELECT MAX(version) as version FROM _migrations'
   );
   if (!currentVersionV6?.version || currentVersionV6.version < 6) {
-    await database.execAsync(`
-      ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'bsc'
-    `);
+    // Check if column already exists (CREATE TABLE may include it)
+    const cols = await database.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(transactions)"
+    );
+    const hasCurrency = cols.some((c) => c.name === 'currency');
+    if (!hasCurrency) {
+      await database.execAsync(`
+        ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'bsc'
+      `);
+    }
     await database.runAsync(
       'INSERT OR REPLACE INTO _migrations (version) VALUES (6)'
     );
@@ -760,35 +811,29 @@ export async function resetDatabase(): Promise<void> {
 
 /**
  * Deletes the entire database file from disk.
- * Resets the in-memory connection so the next getDatabase() creates a fresh one.
+ *
+ * WARNING: On Android, expo-sqlite closeAsync() permanently breaks the
+ * native handle for the DB name within the process. Do NOT call closeAsync().
+ * If the file must be deleted, the app should be restarted afterward.
  */
 export async function deleteDatabase(): Promise<void> {
-  // Reset in-memory connection
-  if (db) {
-    try {
-      await db.closeAsync();
-    } catch {
-      // ignore — may already be closed
-    }
-    db = null;
-    dbPromise = null;
-  }
+  // NEVER call db.closeAsync() — it breaks the native handle on Android.
+  // Just null the references so getDatabase() creates a fresh connection.
+  db = null;
+  dbPromise = null;
 
-  // Delete the file from device storage
+  // Delete DB file + WAL/SHM sidecar files
   const documentDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
-  const dbPath = `${documentDir}SQLite/${DB_NAME}`;
-  try {
-    const info = await FileSystem.getInfoAsync(dbPath);
-    if (info.exists) {
-      await FileSystem.deleteAsync(dbPath, { idempotent: true });
-    }
-  } catch {
-    // Fallback: try the Expo SQLite default path
-    const fallbackPath = `${FileSystem.documentDirectory}SQLite/${DB_NAME}`;
+  const basePath = `${documentDir}SQLite/${DB_NAME}`;
+  const filesToDelete = [basePath, `${basePath}-wal`, `${basePath}-shm`];
+  for (const filePath of filesToDelete) {
     try {
-      await FileSystem.deleteAsync(fallbackPath, { idempotent: true });
+      const info = await FileSystem.getInfoAsync(filePath);
+      if (info.exists) {
+        await FileSystem.deleteAsync(filePath, { idempotent: true });
+      }
     } catch {
-      // If neither works, the next getDatabase() will create a fresh one anyway
+      // ignore
     }
   }
 }

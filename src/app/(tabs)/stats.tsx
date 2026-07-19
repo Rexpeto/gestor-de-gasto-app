@@ -64,7 +64,11 @@ export default function StatsScreen() {
             const rates = useRateStore.getState().getRates(lm - 1, ly);
             let total = 0;
             for (const tx of txs) {
-                const usdtAmount = toUsdtEquivalent(tx.amount, tx.currency, rates);
+                const usdtAmount = toUsdtEquivalent(
+                    tx.amount,
+                    tx.currency,
+                    rates,
+                );
                 total += usdtAmount;
             }
             setLastMonthExpense(total);
@@ -94,7 +98,13 @@ export default function StatsScreen() {
     const topCategories = expenseCategories.slice(0, 5);
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View
+            style={{
+                flex: 1,
+                backgroundColor: colors.background,
+                paddingTop: 10,
+            }}
+        >
             <ScrollView
                 style={{ flex: 1, paddingTop: 20, paddingBottom: 42 }}
                 contentContainerStyle={{ paddingBottom: 112 }}
@@ -147,7 +157,9 @@ export default function StatsScreen() {
                             Categorías Top
                         </Text>
                         {showCategories && (
-                            <Pressable onPress={() => router.push("/categories")}>
+                            <Pressable
+                                onPress={() => router.push("/categories")}
+                            >
                                 <Text
                                     className="text-sm font-medium"
                                     style={{

@@ -14,7 +14,6 @@ import {
 
 import { showErrorToast, showSuccessToast } from '@/components/ThemedToast';
 import {
-  deleteDatabase,
   exportDatabase,
   importDatabase,
   resetDatabase,
@@ -212,7 +211,7 @@ export default function DatabaseScreen() {
   const handleDelete = () => {
     showAlert(
       'Eliminar Base de Datos',
-      '¿Estás seguro? Se eliminará TODO el archivo de la base de datos. La aplicación se reiniciará con datos de fábrica.',
+      '¿Estás seguro? Se eliminarán todas las transacciones, categorías y configuraciones, y se crearán las categorías por defecto.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -221,9 +220,11 @@ export default function DatabaseScreen() {
           onPress: async () => {
             setDeleting(true);
             try {
-              await deleteDatabase();
-              // After deletion, getDatabase() creates a fresh DB
-              // Reload all stores from the brand-new database
+              // Use resetDatabase instead of deleteDatabase:
+              // On Android, expo-sqlite leaks the native handle after file deletion,
+              // causing NullPointerException on the next openDatabaseAsync call.
+              // resetDatabase() drops + recreates tables within the same connection.
+              await resetDatabase();
               await reloadAllStores();
               showSuccessToast('Base de datos eliminada');
             } catch {
