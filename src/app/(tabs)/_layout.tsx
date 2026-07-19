@@ -1,38 +1,48 @@
-import { useCallback, useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
-} from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { usePathname, useRouter } from 'expo-router';
-import TopTabs from 'expo-router/js-top-tabs';
+import { usePathname, useRouter } from "expo-router";
+import TopTabs from "expo-router/js-top-tabs";
 import {
     ChartBarBig,
     LayoutDashboard,
     Receipt,
     SlidersHorizontal,
-} from 'lucide-react-native/icons';
+} from "lucide-react-native/icons";
+import { useCallback, useEffect } from "react";
+import { Pressable, Text, View } from "react-native";
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useThemeColors } from '@/store/theme-store';
+import { useThemeColors } from "@/store/theme-store";
 
 // ── Configuración de cada tab ──
 interface TabConfig {
     name: string;
-    path: '/' | '/transactions' | '/stats' | '/settings';
+    path: "/" | "/transactions" | "/stats" | "/settings";
     label: string;
     icon: React.FC<{ size: number; color: string }>;
 }
 
 const TABS: TabConfig[] = [
-    { name: 'index', path: '/', label: 'Inicio', icon: LayoutDashboard },
-    { name: 'transactions', path: '/transactions', label: 'Historial', icon: Receipt },
-    { name: 'stats', path: '/stats', label: 'Stats', icon: ChartBarBig },
-    { name: 'settings', path: '/settings', label: 'Ajustes', icon: SlidersHorizontal },
+    { name: "index", path: "/", label: "Inicio", icon: LayoutDashboard },
+    {
+        name: "transactions",
+        path: "/transactions",
+        label: "Historial",
+        icon: Receipt,
+    },
+    { name: "stats", path: "/stats", label: "Stats", icon: ChartBarBig },
+    {
+        name: "settings",
+        path: "/settings",
+        label: "Ajustes",
+        icon: SlidersHorizontal,
+    },
 ];
 
-const CIRCLE_SIZE = 48;
+const CIRCLE_SIZE = 50;
 const TAB_WIDTH = 72;
 
 // ── Bottom tab bar personalizado (Stitch floating pill) ──
@@ -45,7 +55,8 @@ function BottomTabBar() {
     const translateX = useSharedValue(0);
 
     const isActive = useCallback(
-        (path: string) => (path === '/' ? pathname === '/' : pathname.startsWith(path)),
+        (path: string) =>
+            path === "/" ? pathname === "/" : pathname.startsWith(path),
         [pathname],
     );
 
@@ -74,40 +85,40 @@ function BottomTabBar() {
     return (
         <View
             style={{
-                position: 'absolute',
+                position: "absolute",
                 bottom: 24 + insets.bottom,
-                alignSelf: 'center',
-                width: '90%',
+                alignSelf: "center",
+                width: "70%",
                 maxWidth: 448,
                 height: 64,
                 borderRadius: 9999,
                 backgroundColor: `${colors.surfaceContainer}CC`,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.05)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#000',
+                borderColor: "rgba(255,255,255,0.05)",
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: "#000",
                 shadowOffset: { width: 0, height: 10 },
                 shadowOpacity: 0.3,
                 shadowRadius: 20,
                 elevation: 20,
-                overflow: 'hidden',
+                overflow: "hidden",
             }}
         >
             {/* Tabs row — centered, contains animated circles */}
             <View
                 style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
                 }}
             >
                 {/* Animated active circle indicator — inside tabs row */}
                 <Animated.View
                     style={[
                         {
-                            position: 'absolute',
+                            position: "absolute",
                             width: CIRCLE_SIZE,
                             height: CIRCLE_SIZE,
                             borderRadius: 9999,
@@ -129,11 +140,11 @@ function BottomTabBar() {
                 <Animated.View
                     style={[
                         {
-                            position: 'absolute',
+                            position: "absolute",
                             width: CIRCLE_SIZE + 8,
                             height: CIRCLE_SIZE + 8,
                             borderRadius: 9999,
-                            backgroundColor: 'transparent',
+                            backgroundColor: "transparent",
                             borderWidth: 2,
                             borderColor: `${colors.primary}15`,
                             left: (TAB_WIDTH - CIRCLE_SIZE - 8) / 2,
@@ -159,23 +170,27 @@ function BottomTabBar() {
                             style={({ pressed }) => ({
                                 width: TAB_WIDTH,
                                 height: 64,
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                alignItems: "center",
+                                justifyContent: "center",
                                 transform: [{ scale: pressed ? 0.9 : 1 }],
                             })}
                         >
                             <tab.icon
                                 size={22}
-                                color={active ? colors.primary : colors.onSurfaceVariant}
+                                color={
+                                    active
+                                        ? colors.primary
+                                        : colors.onSurfaceVariant
+                                }
                             />
                             {!active && (
                                 <Text
                                     style={{
-                                        fontFamily: 'Geist',
+                                        fontFamily: "Geist",
                                         fontSize: 11,
-                                        fontWeight: '600',
+                                        fontWeight: "600",
                                         letterSpacing: 0.05,
-                                        textTransform: 'uppercase',
+                                        textTransform: "uppercase",
                                         color: colors.onSurfaceVariant,
                                         marginTop: 2,
                                         opacity: 0.6,
