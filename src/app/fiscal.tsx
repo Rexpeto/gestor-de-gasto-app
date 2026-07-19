@@ -13,6 +13,7 @@ import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
+import { budgetToBs, bsToUsdt, bsToUsd, bsToEur } from "@/utils/currency";
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ export default function FiscalScreen() {
         const bcvUsd = parseFloat(bcvUsdRate) || 0;
         const bcvEur = parseFloat(bcvEurRate) || 0;
         const budget = parseFloat(budgetValue) || 0;
+        const rates = { p2pRate: p2p, bcvUsdRate: bcvUsd, bcvEurRate: bcvEur };
 
         const hasData =
             budget > 0 &&
@@ -92,41 +94,35 @@ export default function FiscalScreen() {
         const fmt = (n: number) =>
             n.toLocaleString("es-VE", { minimumFractionDigits: 2 });
 
-        if (budgetCurrency === "USDT") {
-            const lines: { label: string; value: string; highlighted?: boolean }[] = [
-                { label: "Bolívares (P2P)", value: `${fmt(budget * p2p)} Bs.` },
-            ];
-            if (bcvUsd > 0)
-                lines.push({
-                    label: "Dólares (BCV)",
-                    value: `${fmt((budget * p2p) / bcvUsd)} USD`,
-                    highlighted: true,
-                });
-            if (bcvEur > 0)
-                lines.push({
-                    label: "Euros (BCV)",
-                    value: `${fmt((budget * p2p) / bcvEur)} EUR`,
-                    highlighted: true,
-                });
-            return lines;
+        // Convert budget to Bs first
+        const budgetInBs = budgetToBs(budget, budgetCurrency, rates);
+        const lines: { label: string; value: string; highlighted?: boolean }[] = [];
+
+        // Show Bs equivalent
+        if (budgetCurrency !== "Bs") {
+            lines.push({ label: "Bolívares (Bs)", value: `${fmt(budgetInBs)} Bs.` });
         }
 
-        const lines: { label: string; value: string; highlighted?: boolean }[] = [];
-        if (p2p > 0)
-            lines.push({ label: "USDT (P2P)", value: `${fmt(budget / p2p)} USDT` });
-        if (bcvUsd > 0)
+        // Show conversions from Bs to other currencies
+        if (budgetCurrency !== "USDT" && p2p > 0) {
+            lines.push({ label: "USDT (P2P)", value: `${fmt(bsToUsdt(budgetInBs, rates))} USDT` });
+        }
+        if (budgetCurrency !== "$" && bcvUsd > 0) {
             lines.push({
                 label: "Dólares (BCV)",
-                value: `${fmt(budget / bcvUsd)} USD`,
+                value: `${fmt(bsToUsd(budgetInBs, rates))} USD`,
                 highlighted: true,
             });
-        if (bcvEur > 0)
+        }
+        if (budgetCurrency !== "€" && bcvEur > 0) {
             lines.push({
                 label: "Euros (BCV)",
-                value: `${fmt(budget / bcvEur)} EUR`,
+                value: `${fmt(bsToEur(budgetInBs, rates))} EUR`,
                 highlighted: true,
             });
-        return lines;
+        }
+
+        return lines.length > 0 ? lines : undefined;
     }
 
     // ── Save ──

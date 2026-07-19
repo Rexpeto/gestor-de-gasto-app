@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TrendingDown, TrendingUp } from 'lucide-react-native/icons';
@@ -9,7 +9,7 @@ import { useTransactionStore } from '@/store/transaction-store';
 import type { BudgetCurrency } from '@/store/budget-store';
 import { budgetToBs, bsToUsdt, bsToEur, bsToUsd } from '@/utils/currency';
 
-type CurrencyMode = 'original' | 'Bs';
+type CurrencyMode = 'original' | 'alternate';
 
 const formatAmount = (amount: number): string =>
   `${Math.abs(amount).toLocaleString('es-ES', {
@@ -77,18 +77,40 @@ export function CreditCard({
   // Convert budget to Bs (base for all conversions)
   const budgetInBs = budgetToBs(budgetAmount, budgetCurrency, rates);
 
-  // Display value based on mode
-  const isBs = currencyMode === 'Bs';
-  const displayBalance = isBs ? budgetInBs : budgetAmount;
-
   // Conversions from Bs
   const balanceUsd = bsToUsd(budgetInBs, rates);
   const balanceEur = bsToEur(budgetInBs, rates);
   const balanceUsdt = bsToUsdt(budgetInBs, rates);
 
+  // Alternate currency: Bs budget → toggle to $, others → toggle to Bs
+  const alternateCurrency = budgetCurrency === 'Bs' ? '$' : 'Bs';
+
+  // Display value based on mode
+  const isAlternate = currencyMode === 'alternate';
+  const displayCurrency = isAlternate ? alternateCurrency : budgetCurrency;
+  const displayBalance = isAlternate
+    ? (alternateCurrency === 'Bs' ? budgetInBs : balanceUsd)
+    : budgetAmount;
+
   // Income/Expense display (already in Bs from store)
-  const displayIncome = isBs ? totalIncome : (rates.p2pRate > 0 ? totalIncome / rates.p2pRate : totalIncome);
-  const displayExpense = isBs ? totalExpense : (rates.p2pRate > 0 ? totalExpense / rates.p2pRate : totalExpense);
+  const bsToDisplay = (bs: number) => {
+    if (displayCurrency === 'Bs') return bs;
+    if (displayCurrency === 'USDT') return rates.p2pRate > 0 ? bs / rates.p2pRate : bs;
+    if (displayCurrency === '$') return rates.bcvUsdRate > 0 ? bs / rates.bcvUsdRate : bs;
+    if (displayCurrency === '€') return rates.bcvEurRate > 0 ? bs / rates.bcvEurRate : bs;
+    return bs;
+  };
+  const displayIncome = bsToDisplay(totalIncome);
+  const displayExpense = bsToDisplay(totalExpense);
+
+  // Format income/expense with current currency
+  const formatWithCurrency = (amount: number) => {
+    if (displayCurrency === 'Bs') return `${formatAmount(amount)} Bs`;
+    if (displayCurrency === '$') return formatDollar(amount);
+    if (displayCurrency === '€') return formatEuro(amount);
+    if (displayCurrency === 'USDT') return formatUsdt(amount);
+    return `${formatAmount(amount)} ${displayCurrency}`;
+  };
 
   const countAnim = useRef(new Animated.Value(0)).current;
   const [animatedBalance, setAnimatedBalance] = useState(displayBalance);
@@ -119,8 +141,13 @@ export function CreditCard({
     if (isAnimating.current) return;
     isAnimating.current = true;
 
-    const nextMode = currencyMode === 'original' ? 'Bs' : 'original';
-    const nextBalance = nextMode === 'Bs' ? budgetInBs : budgetAmount;
+    const nextMode = currencyMode === 'original' ? 'alternate' : 'original';
+    const nextDisplayCurrency = nextMode === 'alternate' ? alternateCurrency : budgetCurrency;
+    const nextBalance = nextDisplayCurrency === 'Bs'
+      ? budgetInBs
+      : nextDisplayCurrency === '$'
+        ? balanceUsd
+        : budgetAmount;
 
     // Capture from/to values for interpolation
     fromRef.current = displayBalance;
@@ -145,17 +172,17 @@ export function CreditCard({
   };
 
   // Currency chip label
-  const chipLabel = isBs ? 'Bs' : budgetCurrency;
+  const chipLabel = isAlternate ? alternateCurrency : budgetCurrency;
   // Format main amount with currency
-  const mainAmountText = isBs
+  const mainAmountText = displayCurrency === 'Bs'
     ? `${formatAmount(animatedBalance)} Bs`
-    : budgetCurrency === '$'
+    : displayCurrency === '$'
       ? `${formatDollar(animatedBalance)}`
-      : budgetCurrency === '€'
+      : displayCurrency === '€'
         ? `${formatEuro(animatedBalance)}`
-        : budgetCurrency === 'USDT'
+        : displayCurrency === 'USDT'
           ? `${formatUsdt(animatedBalance)}`
-          : `${formatAmount(animatedBalance)} ${budgetCurrency}`;
+          : `${formatAmount(animatedBalance)} ${displayCurrency}`;
 
   return (
     <LinearGradient
@@ -255,65 +282,27 @@ export function CreditCard({
         </Pressable>
       </View>
 
-      {/* Conversion row: show other currencies */}
-      {budgetAmount > 0 && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 6,
-          }}
-        >
-          {/* In original mode: show Bs, €, USDT (skip the original currency) */}
-          {!isBs && (
-            <>
-              <Text
-                style={{
-                  fontFamily: 'Geist',
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: colors.onSurfaceVariant,
-                }}
-              >
-                {formatAmount(budgetInBs)} Bs
-              </Text>
-              {balanceEur > 0 && (
-                <>
-                  <Text style={{ fontSize: 13, color: colors.outline }}>·</Text>
-                  <Text
-                    style={{
-                      fontFamily: 'Geist',
-                      fontSize: 14,
-                      fontWeight: '500',
-                      color: colors.onSurfaceVariant,
-                    }}
-                  >
-                    {formatEuro(balanceEur)}
-                  </Text>
-                </>
-              )}
-              {balanceUsdt > 0 && (
-                <>
-                  <Text style={{ fontSize: 13, color: colors.outline }}>·</Text>
-                  <Text
-                    style={{
-                      fontFamily: 'Geist',
-                      fontSize: 14,
-                      fontWeight: '500',
-                      color: colors.onSurfaceVariant,
-                    }}
-                  >
-                    {formatUsdt(balanceUsdt)}
-                  </Text>
-                </>
-              )}
-            </>
-          )}
-          {/* In Bs mode: show $, €, USDT */}
-          {isBs && (
-            <>
-              {balanceUsd > 0 && (
+      {/* Conversion row: show the two currencies that aren't Bs or the budget currency */}
+      {budgetAmount > 0 && (() => {
+        const items: { key: string; label: string }[] = [];
+        if (budgetCurrency === '€' || budgetCurrency === 'USDT') {
+          if (displayCurrency !== '$' && balanceUsd > 0) items.push({ key: '$', label: formatDollar(balanceUsd) });
+        }
+        if (budgetCurrency !== '€' && displayCurrency !== '€' && balanceEur > 0) items.push({ key: '€', label: formatEuro(balanceEur) });
+        if (budgetCurrency !== 'USDT' && displayCurrency !== 'USDT' && balanceUsdt > 0) items.push({ key: 'USDT', label: formatUsdt(balanceUsdt) });
+        if (items.length === 0) return null;
+        return (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 6,
+            }}
+          >
+            {items.map((item, i) => (
+              <React.Fragment key={item.key}>
+                {i > 0 && <Text style={{ fontSize: 13, color: colors.outline }}>·</Text>}
                 <Text
                   style={{
                     fontFamily: 'Geist',
@@ -322,43 +311,13 @@ export function CreditCard({
                     color: colors.onSurfaceVariant,
                   }}
                 >
-                  {formatDollar(balanceUsd)}
+                  {item.label}
                 </Text>
-              )}
-              {balanceUsd > 0 && balanceEur > 0 && (
-                <Text style={{ fontSize: 13, color: colors.outline }}>·</Text>
-              )}
-              {balanceEur > 0 && (
-                <Text
-                  style={{
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    fontWeight: '500',
-                    color: colors.onSurfaceVariant,
-                  }}
-                >
-                  {formatEuro(balanceEur)}
-                </Text>
-              )}
-              {balanceEur > 0 && balanceUsdt > 0 && (
-                <Text style={{ fontSize: 13, color: colors.outline }}>·</Text>
-              )}
-              {balanceUsdt > 0 && (
-                <Text
-                  style={{
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    fontWeight: '500',
-                    color: colors.onSurfaceVariant,
-                  }}
-                >
-                  {formatUsdt(balanceUsdt)}
-                </Text>
-              )}
-            </>
-          )}
-        </View>
-      )}
+              </React.Fragment>
+            ))}
+          </View>
+        );
+      })()}
 
       {/* Bottom row: Ingresos + Gastos */}
       <View
@@ -389,9 +348,7 @@ export function CreditCard({
                 color: colors.primary,
               }}
             >
-              {isBs
-                ? `${formatAmount(displayIncome)} Bs`
-                : formatUsdt(displayIncome)}
+              {formatWithCurrency(displayIncome)}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -413,9 +370,7 @@ export function CreditCard({
                 color: colors.error,
               }}
             >
-              {isBs
-                ? `${formatAmount(displayExpense)} Bs`
-                : formatUsdt(displayExpense)}
+              {formatWithCurrency(displayExpense)}
             </Text>
           </View>
         </View>

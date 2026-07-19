@@ -58,12 +58,25 @@ export function RateCalendar({
 }: RateCalendarProps) {
     const colors = useThemeColors();
     const { ratesByDate, isLoading } = useBcvRates();
-    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+    // Auto-select today's date on mount
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
     // Reset selected day when month/year changes
     useEffect(() => {
         setSelectedDate(null);
     }, [month, year]);
+
+    // Auto-fill rates from BCV data when today is selected on mount
+    useEffect(() => {
+        if (selectedDate && ratesByDate[selectedDate]) {
+            const rate = ratesByDate[selectedDate];
+            if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
+            if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
+        }
+    }, [selectedDate, ratesByDate]);
 
     // Build markedDates for react-native-calendars
     const markedDates = useMemo(() => {
@@ -106,7 +119,6 @@ export function RateCalendar({
         }
     }
 
-    const today = new Date();
     const isCurrentMonth =
         today.getMonth() === month && today.getFullYear() === year;
     const maxDate = isCurrentMonth
