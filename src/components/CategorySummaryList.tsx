@@ -5,8 +5,11 @@ import { AnimatedProgressBar } from "@/components/AnimatedProgressBar";
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import type { Budget } from "@/store/budget-store";
+import { useRateStore } from "@/store/rate-store";
 import type { ThemeColors } from "@/store/theme-store";
+import { useTransactionStore } from "@/store/transaction-store";
 import type { CategorySummary } from "@/types";
+import { budgetToUsdt } from "@/utils/currency";
 import { formatCurrency } from "@/utils/format";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -36,6 +39,11 @@ export function CategorySummaryList({
     if (categories.length === 0) return null;
 
     const accentColor = type === "income" ? colors.success : colors.primary;
+    const getRates = useRateStore((s) => s.getRates);
+    // Use current month for budget conversion (same month as displayed categories)
+    const selectedMonth = useTransactionStore((s) => s.selectedMonth);
+    const selectedYear = useTransactionStore((s) => s.selectedYear);
+    const rates = getRates(selectedMonth - 1, selectedYear); // 0-indexed for rate store
 
     return (
         <AnimatedSection delay={delay} duration={600} style={{ marginTop: 28, marginBottom: type === "income" ? 0 : 32, paddingHorizontal: 20 }}>
@@ -84,10 +92,14 @@ export function CategorySummaryList({
                 {categories.map((cat, index) => {
                     const budget = budgets.find((b) => b.categoryId === cat.categoryId);
                     const hasBudget = budget != null && budget.enabled && budget.amount > 0;
-                    const budgetPct = hasBudget
-                        ? Math.min(Math.round((cat.total / budget.amount) * 100), 100)
+                    // Convert budget amount to USDT for apples-to-apples comparison with cat.total
+                    const budgetInUsdt = hasBudget
+                        ? budgetToUsdt(budget.amount, budget.currency, rates)
                         : 0;
-                    const isOver = hasBudget && cat.total > budget.amount;
+                    const budgetPct = hasBudget
+                        ? Math.min(Math.round((cat.total / budgetInUsdt) * 100), 100)
+                        : 0;
+                    const isOver = hasBudget && cat.total > budgetInUsdt;
 
                     return (
                         <AnimatedSection key={cat.categoryId} delay={delay + 100 + index * 120} duration={500} distance={16}>

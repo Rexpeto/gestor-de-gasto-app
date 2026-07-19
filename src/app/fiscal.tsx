@@ -1,12 +1,12 @@
-import { ArrowLeftRight, Wallet } from "lucide-react-native/icons";
+import { Wallet } from "lucide-react-native/icons";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text } from "react-native";
 
 import { showErrorToast, showSuccessToast } from "@/components/ThemedToast";
 import { GlassCard } from "@/components/settings/GlassCard";
 import { SectionTitle } from "@/components/settings/SectionTitle";
 import { BudgetInput } from "@/components/fiscal/BudgetInput";
-import { MonthAccordion } from "@/components/fiscal/MonthAccordion";
+import { RateCalendar } from "@/components/fiscal/RateCalendar";
 import { PeriodSelector } from "@/components/fiscal/PeriodSelector";
 import { SaveButton } from "@/components/fiscal/SaveButton";
 import { usePreferencesStore } from "@/store/preferences-store";
@@ -38,12 +38,9 @@ export default function FiscalScreen() {
     const [budgetValue, setBudgetValue] = useState(
         String(monthlyBudget > 0 ? monthlyBudget : ""),
     );
-    const [expandedMonths, setExpandedMonths] = useState<Set<string>>(
-        new Set([`${new Date().getMonth()}-${new Date().getFullYear()}`]),
-    );
-    const [inputRates, setInputRates] = useState<
-        Record<string, { p2p: string; bcvUsd: string; bcvEur: string }>
-    >({});
+    const [p2pRate, setP2pRate] = useState("");
+    const [bcvUsdRate, setBcvUsdRate] = useState("");
+    const [bcvEurRate, setBcvEurRate] = useState("");
 
     // ── Effects ──
 
@@ -60,55 +57,28 @@ export default function FiscalScreen() {
         if (!loaded) loadRates();
     }, [loaded, loadRates]);
 
+    // When store rates are loaded or month changes, populate inputs
     useEffect(() => {
-        if (loaded && !initRef.current) {
-            initRef.current = true;
-            const initial: Record<string, { p2p: string; bcvUsd: string; bcvEur: string }> = {};
-            for (const [key, rates] of Object.entries(storeRatesByMonth)) {
-                initial[key] = {
-                    p2p: String(rates.p2pRate),
-                    bcvUsd: String(rates.bcvUsdRate),
-                    bcvEur: String(rates.bcvEurRate),
-                };
-            }
-            setInputRates(initial);
+        if (!loaded) return;
+        const key = `${selectedMonth}-${selectedYear}`;
+        const rates = storeRatesByMonth[key];
+        if (rates) {
+            setP2pRate(String(rates.p2pRate || ""));
+            setBcvUsdRate(String(rates.bcvUsdRate || ""));
+            setBcvEurRate(String(rates.bcvEurRate || ""));
+        } else {
+            setP2pRate("");
+            setBcvUsdRate("");
+            setBcvEurRate("");
         }
-    }, [loaded, storeRatesByMonth]);
+    }, [loaded, storeRatesByMonth, selectedMonth, selectedYear]);
 
-    // ── Helpers ──
+    // ── Conversion lines ──
 
-    function getInputRates(key: string) {
-        return inputRates[key] ?? { p2p: "", bcvUsd: "", bcvEur: "" };
-    }
-
-    function updateRate(
-        key: string,
-        field: "p2p" | "bcvUsd" | "bcvEur",
-        value: string,
-    ) {
-        setInputRates((prev) => ({
-            ...prev,
-            [key]: {
-                ...(prev[key] ?? { p2p: "", bcvUsd: "", bcvEur: "" }),
-                [field]: value,
-            },
-        }));
-    }
-
-    function toggleMonth(key: string) {
-        setExpandedMonths((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key);
-            else next.add(key);
-            return next;
-        });
-    }
-
-    function buildConversionLines(key: string) {
-        const rates = getInputRates(key);
-        const p2p = parseFloat(rates.p2p) || 0;
-        const bcvUsd = parseFloat(rates.bcvUsd) || 0;
-        const bcvEur = parseFloat(rates.bcvEur) || 0;
+    function buildConversionLines() {
+        const p2p = parseFloat(p2pRate) || 0;
+        const bcvUsd = parseFloat(bcvUsdRate) || 0;
+        const bcvEur = parseFloat(bcvEurRate) || 0;
         const budget = parseFloat(budgetValue) || 0;
 
         const hasData =
@@ -168,15 +138,15 @@ export default function FiscalScreen() {
             await setBudgetCurrency(budgetCurrency);
 
             const year = parseInt(selectedYear, 10);
-            for (let m = 0; m < 12; m++) {
-                const key = `${m}-${selectedYear}`;
-                const rates = inputRates[key];
-                if (!rates) continue;
-                const p2pRate = parseFloat(rates.p2p) || 0;
-                const bcvUsdRate = parseFloat(rates.bcvUsd) || 0;
-                const bcvEurRate = parseFloat(rates.bcvEur) || 0;
-                if (p2pRate === 0 && bcvUsdRate === 0 && bcvEurRate === 0) continue;
-                await setRates(m, year, { p2pRate, bcvUsdRate, bcvEurRate });
+            const p2p = parseFloat(p2pRate) || 0;
+            const bcvUsd = parseFloat(bcvUsdRate) || 0;
+            const bcvEur = parseFloat(bcvEurRate) || 0;
+            if (p2p > 0 || bcvUsd > 0 || bcvEur > 0) {
+                await setRates(selectedMonth, year, {
+                    p2pRate: p2p,
+                    bcvUsdRate: bcvUsd,
+                    bcvEurRate: bcvEur,
+                });
             }
 
             await Promise.all([
@@ -192,11 +162,6 @@ export default function FiscalScreen() {
     }
 
     // ── Render ──
-
-    const yearMonths = Array.from({ length: 12 }, (_, i) => ({
-        index: i,
-        key: `${i}-${selectedYear}`,
-    }));
 
     return (
         <ScrollView
@@ -239,7 +204,7 @@ export default function FiscalScreen() {
 
             {/* ── Rates ── */}
             <GlassCard>
-                <SectionTitle label="Tasas (por mes)" />
+                <SectionTitle label="Tasas de Cambio" />
                 <Text
                     style={{
                         fontFamily: "Inter",
@@ -248,24 +213,21 @@ export default function FiscalScreen() {
                         marginBottom: 16,
                     }}
                 >
-                    Configura las tasas de cambio para cada mes del año{" "}
-                    {selectedYear}.
+                    Selecciona un día para ver las tasas BCV. Los datos se
+                    cargan automáticamente del BCV.
                 </Text>
 
-                {yearMonths.map(({ index, key }) => (
-                    <MonthAccordion
-                        key={key}
-                        monthIndex={index}
-                        year={selectedYear}
-                        isExpanded={expandedMonths.has(key)}
-                        rates={getInputRates(key)}
-                        onToggle={() => toggleMonth(key)}
-                        onRateChange={(field, value) =>
-                            updateRate(key, field, value)
-                        }
-                        conversionLines={buildConversionLines(key)}
-                    />
-                ))}
+                <RateCalendar
+                    month={selectedMonth}
+                    year={parseInt(selectedYear, 10)}
+                    p2pRate={p2pRate}
+                    bcvUsdRate={bcvUsdRate}
+                    bcvEurRate={bcvEurRate}
+                    onP2pRateChange={setP2pRate}
+                    onBcvUsdRateChange={setBcvUsdRate}
+                    onBcvEurRateChange={setBcvEurRate}
+                    conversionLines={buildConversionLines()}
+                />
             </GlassCard>
 
             {/* ── Save ── */}

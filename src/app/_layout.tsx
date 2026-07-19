@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import ToastMessage from 'react-native-toast-message';
 
@@ -22,6 +23,8 @@ import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useSheetStore } from '@/store/sheet-store';
+
+const queryClient = new QueryClient();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -125,92 +128,94 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <HeroUINativeProvider>
-          <ThemeProvider value={navigationTheme}>
-            <View className={`flex-1 bg-background ${resolvedTheme}`}>
-              <StatusBar style={statusBarStyle} />
-              <Stack
-                screenOptions={{
-                  contentStyle: { backgroundColor: colors.background },
-                }}
-              >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="add-transaction"
-                  options={{
-                    presentation: 'modal',
-                    headerShown: false,
-                    contentStyle: { backgroundColor: 'transparent' },
+      <QueryClientProvider client={queryClient}>
+        <BottomSheetModalProvider>
+          <HeroUINativeProvider>
+            <ThemeProvider value={navigationTheme}>
+              <View className={`flex-1 bg-background ${resolvedTheme}`}>
+                <StatusBar style={statusBarStyle} />
+                <Stack
+                  screenOptions={{
+                    contentStyle: { backgroundColor: colors.background },
                   }}
-                />
-                <Stack.Screen
-                  name="categories"
-                  options={{
-                    title: 'Categorías',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-                <Stack.Screen
-                  name="budget"
-                  options={{
-                    title: 'Presupuesto',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-                <Stack.Screen
-                  name="add-category"
-                  options={{
-                    presentation: 'modal',
-                    title: 'Nueva categoría',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-                <Stack.Screen
-                  name="apariencia"
-                  options={{
-                    title: 'Apariencia',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-                <Stack.Screen
-                  name="database"
-                  options={{
-                    title: 'Base de Datos',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-                <Stack.Screen
-                  name="fiscal"
-                  options={{
-                    title: 'Fiscal',
-                    headerStyle: { backgroundColor: colors.background },
-                    headerTintColor: colors.onSurface,
-                  }}
-                />
-              </Stack>
+                >
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="add-transaction"
+                    options={{
+                      presentation: 'modal',
+                      headerShown: false,
+                      contentStyle: { backgroundColor: 'transparent' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="categories"
+                    options={{
+                      title: 'Categorías',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="budget"
+                    options={{
+                      title: 'Presupuesto',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="add-category"
+                    options={{
+                      presentation: 'modal',
+                      title: 'Nueva categoría',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="apariencia"
+                    options={{
+                      title: 'Apariencia',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="database"
+                    options={{
+                      title: 'Base de Datos',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="fiscal"
+                    options={{
+                      title: 'Fiscal',
+                      headerStyle: { backgroundColor: colors.background },
+                      headerTintColor: colors.onSurface,
+                    }}
+                  />
+                </Stack>
 
-              {/* BottomSheet a nivel raíz — POR ENCIMA de los tabs */}
-              <AddTransactionSheet
-                isOpen={sheetIsOpen}
-                initialType={sheetType}
-                onClose={closeSheet}
-              />
+                {/* BottomSheet a nivel raíz — POR ENCIMA de los tabs */}
+                <AddTransactionSheet
+                  isOpen={sheetIsOpen}
+                  initialType={sheetType}
+                  onClose={closeSheet}
+                />
 
-              {/* AlertDialog personalizado — POR ENCIMA de los tabs */}
-              <AlertDialog />
+                {/* AlertDialog personalizado — POR ENCIMA de los tabs */}
+                <AlertDialog />
 
-              {/* Toast notifications - POR ENCIMA de todo */}
-              <ToastMessage config={toastConfig} />
-            </View>
-          </ThemeProvider>
-        </HeroUINativeProvider>
-      </BottomSheetModalProvider>
+                {/* Toast notifications - POR ENCIMA de todo */}
+                <ToastMessage config={toastConfig} />
+              </View>
+            </ThemeProvider>
+          </HeroUINativeProvider>
+        </BottomSheetModalProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

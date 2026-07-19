@@ -13,25 +13,7 @@ import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
 import { useThemeColors } from "@/store/theme-store";
-import { useTransactionStore } from "@/store/transaction-store";
-
-/**
- * Converts a transaction amount to USDT equivalent.
- * Same logic as in transaction-store.ts
- */
-function toUsdtEquivalent(
-    amount: number,
-    currency: string,
-    rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null,
-): number {
-    if (!rates || rates.p2pRate <= 0) return amount;
-    if (currency === "usdt") return amount;
-    if (currency === "bsc" && rates.bcvUsdRate > 0)
-        return amount * (rates.bcvUsdRate / rates.p2pRate);
-    if (currency === "eur" && rates.bcvEurRate > 0)
-        return amount * (rates.bcvEurRate / rates.p2pRate);
-    return amount;
-}
+import { toUsdtEquivalent, useTransactionStore } from "@/store/transaction-store";
 
 export default function StatsScreen() {
     const colors = useThemeColors();

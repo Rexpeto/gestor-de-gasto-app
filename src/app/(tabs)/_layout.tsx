@@ -88,7 +88,7 @@ function BottomTabBar() {
                 position: "absolute",
                 bottom: 24 + insets.bottom,
                 alignSelf: "center",
-                width: "70%",
+                width: "80%",
                 maxWidth: 448,
                 height: 64,
                 borderRadius: 9999,

@@ -15,7 +15,7 @@ import type { Transaction, TransactionFormData, MonthlySummary, CategorySummary 
  *
  * Falls back to raw amount if rates are not available (same as current behavior).
  */
-function toUsdtEquivalent(
+export function toUsdtEquivalent(
   amount: number,
   currency: string,
   rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null,
@@ -118,7 +118,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     const [transactions] = await Promise.all([
       db.getTransactionsByMonth(selectedYear, selectedMonth),
     ]);
-    const rates = useRateStore.getState().getRates(selectedMonth, selectedYear);
+    const rates = useRateStore.getState().getRates(selectedMonth - 1, selectedYear);
 
     // Compute per-category totals with USDT conversion
     const incomeMap = new Map<
