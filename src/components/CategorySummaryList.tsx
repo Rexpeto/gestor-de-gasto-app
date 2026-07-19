@@ -9,14 +9,14 @@ import { useRateStore } from "@/store/rate-store";
 import type { ThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { CategorySummary } from "@/types";
-import { budgetToUsdt } from "@/utils/currency";
+import { budgetToBs } from "@/utils/currency";
 import { formatCurrency } from "@/utils/format";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
-    bsc: "$",
-    eur: "€",
-    usdt: "USDT",
-    mixed: "USDT",
+    bsc: "Bs",
+    eur: "Bs",
+    usdt: "Bs",
+    mixed: "Bs",
 };
 
 interface CategorySummaryListProps {
@@ -92,14 +92,14 @@ export function CategorySummaryList({
                 {categories.map((cat, index) => {
                     const budget = budgets.find((b) => b.categoryId === cat.categoryId);
                     const hasBudget = budget != null && budget.enabled && budget.amount > 0;
-                    // Convert budget amount to USDT for apples-to-apples comparison with cat.total
-                    const budgetInUsdt = hasBudget
-                        ? budgetToUsdt(budget.amount, budget.currency, rates)
+                    // Convert budget amount to Bs for apples-to-apples comparison with cat.total
+                    const budgetInBs = hasBudget
+                        ? budgetToBs(budget.amount, budget.currency, rates)
                         : 0;
                     const budgetPct = hasBudget
-                        ? Math.min(Math.round((cat.total / budgetInUsdt) * 100), 100)
+                        ? Math.min(Math.round((cat.total / budgetInBs) * 100), 100)
                         : 0;
-                    const isOver = hasBudget && cat.total > budgetInUsdt;
+                    const isOver = hasBudget && cat.total > budgetInBs;
 
                     return (
                         <AnimatedSection key={cat.categoryId} delay={delay + 100 + index * 120} duration={500} distance={16}>

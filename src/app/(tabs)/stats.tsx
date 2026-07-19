@@ -13,7 +13,8 @@ import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
 import { useRateStore } from "@/store/rate-store";
 import { useThemeColors } from "@/store/theme-store";
-import { toUsdtEquivalent, useTransactionStore } from "@/store/transaction-store";
+import { useTransactionStore } from "@/store/transaction-store";
+import { toBsEquivalent } from "@/utils/currency";
 
 export default function StatsScreen() {
     const colors = useThemeColors();
@@ -40,18 +41,18 @@ export default function StatsScreen() {
             } else {
                 lm -= 1;
             }
-            // Fetch last month's transactions and convert to USDT equivalent
+            // Fetch last month's transactions and convert to Bs equivalent
             const txs = await db.getTransactionsByMonth(ly, lm);
             // Rate store uses 0-indexed months, but lm is 1-indexed
             const rates = useRateStore.getState().getRates(lm - 1, ly);
             let total = 0;
             for (const tx of txs) {
-                const usdtAmount = toUsdtEquivalent(
+                const bsAmount = toBsEquivalent(
                     tx.amount,
                     tx.currency,
                     rates,
                 );
-                total += usdtAmount;
+                total += bsAmount;
             }
             setLastMonthExpense(total);
         })();

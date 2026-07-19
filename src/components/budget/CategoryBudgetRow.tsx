@@ -18,10 +18,10 @@ interface CategoryBudgetRowProps {
     currency: BudgetCurrency;
     enabled: boolean;
   } | null;
-  /** Spent amount in USDT equivalent */
-  spentUsdt: number;
-  /** Budget amount in USDT equivalent */
-  budgetUsdt: number;
+  /** Spent amount in Bs equivalent */
+  spentBs: number;
+  /** Budget amount in Bs equivalent */
+  budgetBs: number;
   /** Spent amount converted back to budget's currency (for display) */
   spentInBudgetCurrency: number;
   editValue: string;
@@ -35,8 +35,8 @@ interface CategoryBudgetRowProps {
 export function CategoryBudgetRow({
   category,
   budget,
-  spentUsdt,
-  budgetUsdt,
+  spentBs,
+  budgetBs,
   spentInBudgetCurrency,
   editValue,
   onEditChange,
@@ -50,11 +50,11 @@ export function CategoryBudgetRow({
   const isEnabled = budget?.enabled ?? false;
   const currency = budget?.currency ?? '$';
 
-  // Calculate percentage based on USDT equivalents
-  const pct = isEnabled && budgetUsdt > 0
-    ? Math.min(Math.round((spentUsdt / budgetUsdt) * 100), 100)
+  // Calculate percentage based on Bs equivalents
+  const pct = isEnabled && budgetBs > 0
+    ? Math.min(Math.round((spentBs / budgetBs) * 100), 100)
     : 0;
-  const isOver = isEnabled && spentUsdt > budgetUsdt;
+  const isOver = isEnabled && spentBs > budgetBs;
 
   return (
     <View

@@ -15,9 +15,9 @@ interface PreferencesState {
   showCategories: boolean;
   /** Whether the presupuesto screen is accessible */
   showPresupuesto: boolean;
-  /** Monthly budget in USDT */
+  /** Monthly budget amount (in the selected budgetCurrency) */
   monthlyBudget: number;
-  /** Whether budget is in USDT or Bs */
+  /** Budget currency: USDT, Bs, $, or € */
   budgetCurrency: BudgetCurrency;
   /** Whether DB values have been loaded */
   loaded: boolean;
@@ -57,7 +57,7 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
         monthlyBudget: budgetRaw ? parseFloat(budgetRaw) : 0,
         showCategories: categoriesRaw !== 'false',
         showPresupuesto: presupuestoRaw !== 'false',
-        budgetCurrency: currencyRaw === 'Bs' ? 'Bs' : 'USDT',
+        budgetCurrency: (['Bs', '$', '€', 'USDT'].includes(currencyRaw) ? currencyRaw : 'USDT') as BudgetCurrency,
         loaded: true,
       });
     } catch (e) {

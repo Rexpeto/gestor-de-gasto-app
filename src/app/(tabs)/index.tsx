@@ -11,7 +11,6 @@ import { showAlert } from "@/store/alert-store";
 import { useBudgetStore } from "@/store/budget-store";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
-import { useRateStore } from "@/store/rate-store";
 import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
@@ -31,38 +30,8 @@ export default function DashboardScreen() {
 
     const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
     const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
-    const getRates = useRateStore((s) => s.getRates);
-    const netBalance = monthlySummary?.balance ?? 0;
-    const totalIncome = monthlySummary?.totalIncome ?? 0;
-    const totalExpense = monthlySummary?.totalExpense ?? 0;
-
-    // Normalize monthlyBudget to USDT if user configured it in Bs
-    let budgetInUsdt = monthlyBudget;
-    if (budgetCurrency === 'Bs' && monthlySummary) {
-        const [yearStr, monthStr] = monthlySummary.month.split("-");
-        const m = parseInt(monthStr, 10) - 1;
-        const y = parseInt(yearStr, 10);
-        const p2p = getRates(m, y).p2pRate;
-        if (p2p > 0) {
-            budgetInUsdt = monthlyBudget / p2p;
-        }
-    }
-
-    // Available: in Bs mode show only budget (normalized); in USDT mode show budget + net flow
-    const displayBalance = budgetCurrency === 'Bs' ? budgetInUsdt : budgetInUsdt + netBalance;
-
-    // ── USDT → USD/EUR conversion (reactive via ratesByMonth) ──
-    const convert = useRateStore((s) => s.convert);
-    const ratesByMonth = useRateStore((s) => s.ratesByMonth);
-
-    const { balanceUsd, balanceEur } = useMemo(() => {
-        if (!monthlySummary) return { balanceUsd: 0, balanceEur: 0 };
-        const [yearStr, monthStr] = monthlySummary.month.split("-");
-        const month = parseInt(monthStr, 10) - 1;
-        const year = parseInt(yearStr, 10);
-        const result = convert(displayBalance, month, year);
-        return { balanceUsd: result.usd, balanceEur: result.eur };
-    }, [displayBalance, monthlySummary, convert, ratesByMonth]);
+    const totalIncome = monthlySummary?.totalIncome ?? 0; // Already in Bs
+    const totalExpense = monthlySummary?.totalExpense ?? 0; // Already in Bs
 
     const getCategoryInfo = useCallback(
         (categoryId: number) => categories.find((c) => c.id === categoryId),
@@ -161,11 +130,10 @@ export default function DashboardScreen() {
                 {/* ── Hero Balance Card ── */}
                 <AnimatedSection delay={100} duration={600} style={{ paddingHorizontal: 20, paddingTop: 40 }}>
                     <CreditCard
-                        balance={displayBalance}
+                        budgetAmount={monthlyBudget}
+                        budgetCurrency={budgetCurrency}
                         totalIncome={totalIncome}
                         totalExpense={totalExpense}
-                        balanceUsd={balanceUsd}
-                        balanceEur={balanceEur}
                     />
                 </AnimatedSection>
 

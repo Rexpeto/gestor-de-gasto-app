@@ -38,7 +38,7 @@ export function BudgetOverviewCard({
           className="text-3xl font-bold"
           style={{ fontFamily: 'Inter', color: colors.primary }}
         >
-          ${totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+          Bs {totalBudgeted.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
         </Text>
         <Text className="text-xs" style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>
           / mes
@@ -70,7 +70,7 @@ export function BudgetOverviewCard({
                 color: isOverBudget ? colors.danger : colors.onSurfaceVariant,
               }}
             >
-              Gastado: ${totalSpent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              Gastado: Bs {totalSpent.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
             </Text>
             <Text
               className="text-xs font-medium"

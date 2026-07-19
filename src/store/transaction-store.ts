@@ -3,31 +3,21 @@ import { create } from 'zustand';
 import * as db from '@/db/database';
 import { useRateStore } from '@/store/rate-store';
 import type { Transaction, TransactionFormData, MonthlySummary, CategorySummary } from '@/types';
+import { toBsEquivalent } from '@/utils/currency';
 
 /**
- * Converts a transaction amount to USDT equivalent based on its currency
+ * Converts a transaction amount to Bs (Bolívares) based on its currency
  * and the month's exchange rates.
  *
  * Math:
- *   $ BCV → USDT: amount * (bcvUsdRate / p2pRate)
- *   € BCV → USDT: amount * (bcvEurRate / p2pRate)
- *   USDT       → no conversion needed
+ *   USDT → Bs: amount × p2pRate
+ *   bsc (USD BCV) → Bs: amount × bcvUsdRate
+ *   eur (EUR BCV) → Bs: amount × bcvEurRate
+ *   bs → no conversion needed
  *
- * Falls back to raw amount if rates are not available (same as current behavior).
+ * Falls back to raw amount if rates are not available.
  */
-export function toUsdtEquivalent(
-  amount: number,
-  currency: string,
-  rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null,
-): number {
-  if (!rates || rates.p2pRate <= 0) return amount;
-  if (currency === 'usdt') return amount;
-  if (currency === 'bsc' && rates.bcvUsdRate > 0)
-    return amount * (rates.bcvUsdRate / rates.p2pRate);
-  if (currency === 'eur' && rates.bcvEurRate > 0)
-    return amount * (rates.bcvEurRate / rates.p2pRate);
-  return amount;
-}
+export { toBsEquivalent };
 
 interface TransactionState {
   // Data
@@ -93,11 +83,11 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     let totalExpense = 0;
 
     for (const tx of transactions) {
-      const usdtAmount = toUsdtEquivalent(tx.amount, tx.currency, rates);
+      const bsAmount = toBsEquivalent(tx.amount, tx.currency, rates);
       if (tx.type === 'income') {
-        totalIncome += usdtAmount;
+        totalIncome += bsAmount;
       } else {
-        totalExpense += usdtAmount;
+        totalExpense += bsAmount;
       }
     }
 
@@ -137,14 +127,14 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     const catInfo = new Map(allCategories.map((c) => [c.id, c]));
 
     for (const tx of transactions) {
-      const usdtAmount = toUsdtEquivalent(tx.amount, tx.currency, rates);
+      const bsAmount = toBsEquivalent(tx.amount, tx.currency, rates);
       const info = catInfo.get(tx.categoryId);
       const name = info?.name ?? 'Sin categoría';
       const icon = info?.icon ?? 'circle-question-mark';
       const color = info?.color ?? '#6366f1';
 
       if (tx.type === 'income') {
-        grandIncome += usdtAmount;
+        grandIncome += bsAmount;
         const entry = incomeMap.get(tx.categoryId) ?? {
           name,
           icon,
@@ -152,11 +142,11 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
           total: 0,
           currencies: new Set<string>(),
         };
-        entry.total += usdtAmount;
+        entry.total += bsAmount;
         entry.currencies.add(tx.currency);
         incomeMap.set(tx.categoryId, entry);
       } else {
-        grandExpense += usdtAmount;
+        grandExpense += bsAmount;
         const entry = expenseMap.get(tx.categoryId) ?? {
           name,
           icon,
@@ -164,7 +154,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
           total: 0,
           currencies: new Set<string>(),
         };
-        entry.total += usdtAmount;
+        entry.total += bsAmount;
         entry.currencies.add(tx.currency);
         expenseMap.set(tx.categoryId, entry);
       }
