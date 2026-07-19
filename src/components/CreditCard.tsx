@@ -40,6 +40,8 @@ interface CreditCardProps {
   budgetAmount: number;
   /** Budget currency: '$', '€', 'Bs', 'USDT' */
   budgetCurrency: BudgetCurrency;
+  /** Exchange rate saved with the budget (for budget → Bs conversion) */
+  budgetRate: number;
   /** Total income in Bs (for the income/expense row) */
   totalIncome: number;
   /** Total expense in Bs (for the income/expense row) */
@@ -49,14 +51,15 @@ interface CreditCardProps {
 /**
  * Hero card showing monthly budget with currency toggle (original ↔ Bs).
  *
- * Example: 150 $ with BCV rate 623.022
+ * Example: 150 $ with budget rate 500, current BCV 674.93
  *   - Original: 150,00 $
- *   - Bs: 93.453,30 Bs
- *   - Conversions: 131,60 € · 109,68 USDT
+ *   - Bs: 75,000 Bs (150 × 500)
+ *   - Conversions: 97.31 € (75,000 / 770.682) · 88.03 USDT (75,000 / 852)
  */
 export function CreditCard({
   budgetAmount,
   budgetCurrency,
+  budgetRate,
   totalIncome,
   totalExpense,
 }: CreditCardProps) {
@@ -74,10 +77,17 @@ export function CreditCard({
   const year = parseInt(yearStr, 10);
   const rates = getRates(month, year);
 
-  // Convert budget to Bs (base for all conversions)
-  const budgetInBs = budgetToBs(budgetAmount, budgetCurrency, rates);
+  // Build rates for budget → Bs conversion using budgetRate
+  const budgetRates = {
+    p2pRate: budgetCurrency === 'USDT' ? budgetRate : rates.p2pRate,
+    bcvUsdRate: budgetCurrency === '$' ? budgetRate : rates.bcvUsdRate,
+    bcvEurRate: budgetCurrency === '€' ? budgetRate : rates.bcvEurRate,
+  };
 
-  // Conversions from Bs
+  // Convert budget to Bs using budgetRate (e.g., 150 × 500 = 75,000 Bs)
+  const budgetInBs = budgetToBs(budgetAmount, budgetCurrency, budgetRates);
+
+  // Conversions from Bs using CURRENT rates (e.g., 75,000 / 770.682 = 97.31 €)
   const balanceUsd = bsToUsd(budgetInBs, rates);
   const balanceEur = bsToEur(budgetInBs, rates);
   const balanceUsdt = bsToUsdt(budgetInBs, rates);
@@ -88,9 +98,20 @@ export function CreditCard({
   // Display value based on mode
   const isAlternate = currencyMode === 'alternate';
   const displayCurrency = isAlternate ? alternateCurrency : budgetCurrency;
+
+  // Primary mode: show amount reconverted from Bs using current rate
+  // (budget was saved at budgetRate, now showing at current rate)
+  const reconvertFromBs = (bs: number, currency: string) => {
+    if (currency === 'Bs') return bs;
+    if (currency === '$') return rates.bcvUsdRate > 0 ? bs / rates.bcvUsdRate : bs;
+    if (currency === '€') return rates.bcvEurRate > 0 ? bs / rates.bcvEurRate : bs;
+    if (currency === 'USDT') return rates.p2pRate > 0 ? bs / rates.p2pRate : bs;
+    return bs;
+  };
+
   const displayBalance = isAlternate
     ? (alternateCurrency === 'Bs' ? budgetInBs : balanceUsd)
-    : budgetAmount;
+    : reconvertFromBs(budgetInBs, budgetCurrency);
 
   // Income/Expense display (already in Bs from store)
   const bsToDisplay = (bs: number) => {

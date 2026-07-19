@@ -38,6 +38,7 @@ interface RateCalendarProps {
     onP2pRateChange: (rate: string) => void;
     onBcvUsdRateChange: (rate: string) => void;
     onBcvEurRateChange: (rate: string) => void;
+    onDayChange?: () => void;
     conversionLines?: { label: string; value: string; highlighted?: boolean }[];
 }
 
@@ -54,6 +55,7 @@ export function RateCalendar({
     onP2pRateChange,
     onBcvUsdRateChange,
     onBcvEurRateChange,
+    onDayChange,
     conversionLines,
 }: RateCalendarProps) {
     const colors = useThemeColors();
@@ -117,6 +119,7 @@ export function RateCalendar({
             if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
             if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
         }
+        onDayChange?.();
     }
 
     const isCurrentMonth =

@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/settings/GlassCard";
 import { SectionTitle } from "@/components/settings/SectionTitle";
 import { BudgetInput } from "@/components/fiscal/BudgetInput";
 import { RateCalendar } from "@/components/fiscal/RateCalendar";
+import { RateInputRow } from "@/components/fiscal/RateInputRow";
 import { PeriodSelector } from "@/components/fiscal/PeriodSelector";
 import { SaveButton } from "@/components/fiscal/SaveButton";
 import { usePreferencesStore } from "@/store/preferences-store";
@@ -23,8 +24,11 @@ export default function FiscalScreen() {
     // ── Stores ──
     const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
     const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
+    const budgetRate = usePreferencesStore((s) => s.budgetRate);
     const setMonthlyBudget = usePreferencesStore((s) => s.setMonthlyBudget);
     const setBudgetCurrency = usePreferencesStore((s) => s.setBudgetCurrency);
+    const setBudgetRate = usePreferencesStore((s) => s.setBudgetRate);
+    const prefsLoaded = usePreferencesStore((s) => s.loaded);
 
     const storeRatesByMonth = useRateStore((s) => s.ratesByMonth);
     const loadRates = useRateStore((s) => s.loadRates);
@@ -36,27 +40,48 @@ export default function FiscalScreen() {
     const [selectedYear, setSelectedYear] = useState(
         String(new Date().getFullYear()),
     );
-    const [budgetValue, setBudgetValue] = useState(
-        String(monthlyBudget > 0 ? monthlyBudget : ""),
-    );
+    const [budgetValue, setBudgetValue] = useState("");
+    const [budgetRateValue, setBudgetRateValue] = useState("");
     const [p2pRate, setP2pRate] = useState("");
     const [bcvUsdRate, setBcvUsdRate] = useState("");
     const [bcvEurRate, setBcvEurRate] = useState("");
 
     // ── Effects ──
 
+    // Initialize local state from store AFTER DB loads
     const budgetInitialized = useRef(false);
     useEffect(() => {
-        if (monthlyBudget > 0 && !budgetInitialized.current) {
-            budgetInitialized.current = true;
-            setBudgetValue(String(monthlyBudget));
+        if (!prefsLoaded) return;
+        if (budgetInitialized.current) return;
+        budgetInitialized.current = true;
+        setBudgetValue(String(monthlyBudget > 0 ? monthlyBudget : ""));
+        if (budgetRate > 0) {
+            setBudgetRateValue(String(budgetRate));
         }
-    }, [monthlyBudget]);
+    }, [prefsLoaded, monthlyBudget, budgetRate]);
 
     const initRef = useRef(false);
     useEffect(() => {
         if (!loaded) loadRates();
     }, [loaded, loadRates]);
+
+    // Auto-fill budget rate only when USER changes currency (not on data load)
+    const prevCurrencyRef = useRef(budgetCurrency);
+    useEffect(() => {
+        // Only auto-fill if currency actually changed by user action
+        if (prevCurrencyRef.current === budgetCurrency) return;
+        prevCurrencyRef.current = budgetCurrency;
+
+        if (budgetCurrency === "$" && bcvUsdRate) {
+            setBudgetRateValue(bcvUsdRate);
+        } else if (budgetCurrency === "€" && bcvEurRate) {
+            setBudgetRateValue(bcvEurRate);
+        } else if (budgetCurrency === "USDT" && p2pRate) {
+            setBudgetRateValue(p2pRate);
+        } else if (budgetCurrency === "Bs") {
+            setBudgetRateValue("");
+        }
+    }, [budgetCurrency, bcvUsdRate, bcvEurRate, p2pRate]);
 
     // When store rates are loaded or month changes, populate inputs
     useEffect(() => {
@@ -133,6 +158,10 @@ export default function FiscalScreen() {
             await setMonthlyBudget(budget);
             await setBudgetCurrency(budgetCurrency);
 
+            // Save the rate for the selected currency
+            const rate = parseFloat(budgetRateValue) || 0;
+            await setBudgetRate(rate);
+
             const year = parseInt(selectedYear, 10);
             const p2p = parseFloat(p2pRate) || 0;
             const bcvUsd = parseFloat(bcvUsdRate) || 0;
@@ -177,6 +206,30 @@ export default function FiscalScreen() {
                     currency={budgetCurrency}
                     onCurrencyChange={setBudgetCurrency}
                 />
+
+                {/* Show rate field when $ or € is selected */}
+                {(budgetCurrency === "$" || budgetCurrency === "€") && (
+                    <>
+                        <Text
+                            style={{
+                                fontFamily: "Inter",
+                                fontSize: 14,
+                                fontWeight: "500",
+                                color: colors.onSurface,
+                                marginTop: 20,
+                                marginBottom: 8,
+                            }}
+                        >
+                            Tasa de Cambio
+                        </Text>
+                        <RateInputRow
+                            label={budgetCurrency === "$" ? "Dólar BCV (Bs.)" : "Euro BCV (Bs.)"}
+                            subtitle="Tasa al guardar"
+                            value={budgetRateValue}
+                            onChangeText={setBudgetRateValue}
+                        />
+                    </>
+                )}
 
                 <Text
                     style={{

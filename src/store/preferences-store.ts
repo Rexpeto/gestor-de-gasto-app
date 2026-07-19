@@ -8,6 +8,7 @@ const SETTINGS_KEYS = {
   showCategories: 'show_categories',
   showPresupuesto: 'show_presupuesto',
   budgetCurrency: 'budget_currency',
+  budgetRate: 'budget_rate',
 } as const;
 
 interface PreferencesState {
@@ -19,6 +20,8 @@ interface PreferencesState {
   monthlyBudget: number;
   /** Budget currency: USDT, Bs, $, or € */
   budgetCurrency: BudgetCurrency;
+  /** Exchange rate saved with the budget (BCV rate when budget was saved) */
+  budgetRate: number;
   /** Whether DB values have been loaded */
   loaded: boolean;
 
@@ -28,6 +31,7 @@ interface PreferencesState {
   setShowPresupuesto: (val: boolean) => void;
   setMonthlyBudget: (val: number) => Promise<void>;
   setBudgetCurrency: (val: BudgetCurrency) => Promise<void>;
+  setBudgetRate: (val: number) => Promise<void>;
 }
 
 export const usePreferencesStore = create<PreferencesState>((set) => ({
@@ -35,15 +39,17 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
   showPresupuesto: true,
   monthlyBudget: 0,
   budgetCurrency: 'USDT',
+  budgetRate: 0,
   loaded: false,
 
   loadPreferences: async () => {
     try {
-      const [budgetRaw, categoriesRaw, presupuestoRaw, currencyRaw] = await Promise.all([
+      const [budgetRaw, categoriesRaw, presupuestoRaw, currencyRaw, rateRaw] = await Promise.all([
         getSetting(SETTINGS_KEYS.monthlyBudget),
         getSetting(SETTINGS_KEYS.showCategories),
         getSetting(SETTINGS_KEYS.showPresupuesto),
         getSetting(SETTINGS_KEYS.budgetCurrency),
+        getSetting(SETTINGS_KEYS.budgetRate),
       ]);
 
       console.log('[preferences-store] loadPreferences:', {
@@ -51,6 +57,7 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
         categoriesRaw,
         presupuestoRaw,
         currencyRaw,
+        rateRaw,
       });
 
       set({
@@ -58,6 +65,7 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
         showCategories: categoriesRaw !== 'false',
         showPresupuesto: presupuestoRaw !== 'false',
         budgetCurrency: (['Bs', '$', '€', 'USDT'].includes(currencyRaw) ? currencyRaw : 'USDT') as BudgetCurrency,
+        budgetRate: rateRaw ? parseFloat(rateRaw) : 0,
         loaded: true,
       });
     } catch (e) {
@@ -87,6 +95,12 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
     console.log('[preferences-store] setBudgetCurrency:', val);
     set({ budgetCurrency: val });
     await setSetting(SETTINGS_KEYS.budgetCurrency, val);
+  },
+
+  setBudgetRate: async (val) => {
+    console.log('[preferences-store] setBudgetRate:', val);
+    set({ budgetRate: val });
+    await setSetting(SETTINGS_KEYS.budgetRate, String(val));
   },
 }));
 

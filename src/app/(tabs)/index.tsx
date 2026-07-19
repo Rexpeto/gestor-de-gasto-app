@@ -11,6 +11,7 @@ import { showAlert } from "@/store/alert-store";
 import { useBudgetStore } from "@/store/budget-store";
 import { useCategoryStore } from "@/store/category-store";
 import { usePreferencesStore } from "@/store/preferences-store";
+import { useRateStore } from "@/store/rate-store";
 import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
@@ -30,6 +31,7 @@ export default function DashboardScreen() {
 
     const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
     const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
+    const budgetRate = usePreferencesStore((s) => s.budgetRate);
     const totalIncome = monthlySummary?.totalIncome ?? 0; // Already in Bs
     const totalExpense = monthlySummary?.totalExpense ?? 0; // Already in Bs
 
@@ -132,6 +134,7 @@ export default function DashboardScreen() {
                     <CreditCard
                         budgetAmount={monthlyBudget}
                         budgetCurrency={budgetCurrency}
+                        budgetRate={budgetRate}
                         totalIncome={totalIncome}
                         totalExpense={totalExpense}
                     />
