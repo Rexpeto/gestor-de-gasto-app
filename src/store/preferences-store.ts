@@ -52,14 +52,6 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
         getSetting(SETTINGS_KEYS.budgetRate),
       ]);
 
-      console.log('[preferences-store] loadPreferences:', {
-        budgetRaw,
-        categoriesRaw,
-        presupuestoRaw,
-        currencyRaw,
-        rateRaw,
-      });
-
       set({
         monthlyBudget: budgetRaw ? parseFloat(budgetRaw) : 0,
         showCategories: categoriesRaw !== 'false',
@@ -68,9 +60,7 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
         budgetRate: rateRaw ? parseFloat(rateRaw) : 0,
         loaded: true,
       });
-    } catch (e) {
-      console.warn('[preferences-store] loadPreferences error:', e);
-      // If DB read fails, keep defaults
+    } catch {
       set({ loaded: true });
     }
   },
@@ -86,19 +76,16 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
   },
 
   setMonthlyBudget: async (val) => {
-    console.log('[preferences-store] setMonthlyBudget:', val);
     set({ monthlyBudget: val });
     await setSetting(SETTINGS_KEYS.monthlyBudget, String(val));
   },
 
   setBudgetCurrency: async (val) => {
-    console.log('[preferences-store] setBudgetCurrency:', val);
     set({ budgetCurrency: val });
     await setSetting(SETTINGS_KEYS.budgetCurrency, val);
   },
 
   setBudgetRate: async (val) => {
-    console.log('[preferences-store] setBudgetRate:', val);
     set({ budgetRate: val });
     await setSetting(SETTINGS_KEYS.budgetRate, String(val));
   },

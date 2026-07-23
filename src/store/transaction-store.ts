@@ -2,22 +2,62 @@ import { create } from 'zustand';
 
 import * as db from '@/db/database';
 import { useRateStore } from '@/store/rate-store';
+import { usePreferencesStore } from '@/store/preferences-store';
 import type { Transaction, TransactionFormData, MonthlySummary, CategorySummary } from '@/types';
-import { toBsEquivalent } from '@/utils/currency';
 
 /**
- * Converts a transaction amount to Bs (Bolívares) based on its currency
- * and the month's exchange rates.
+ * Resolve the exchange rate (Bs per 1 unit of currency) for a given date and currency.
  *
- * Math:
- *   USDT → Bs: amount × p2pRate
- *   bsc (USD BCV) → Bs: amount × bcvUsdRate
- *   eur (EUR BCV) → Bs: amount × bcvEurRate
- *   bs → no conversion needed
- *
- * Falls back to raw amount if rates are not available.
+ * Looks up the daily rate first, falls back to monthly rates.
+ * Returns the raw rate value used for conversion (e.g. p2pRate for USDT).
  */
-export { toBsEquivalent };
+async function resolveExchangeRate(date: string, currency: string): Promise<number> {
+  if (currency === 'bs') return 0; // Bs needs no conversion
+
+  const [yearStr, monthStr] = date.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10); // 1-indexed
+
+  await useRateStore.getState().loadDailyRates(year, month);
+  const rateStore = useRateStore.getState();
+
+  // Try daily rate first
+  const daily = rateStore.dailyRatesByDate[date];
+  if (daily) {
+    switch (currency) {
+      case 'usdt': if (daily.p2pRate > 0) return daily.p2pRate; break;
+      case 'bsc':  if (daily.bcvUsdRate > 0) return daily.bcvUsdRate; break;
+      case 'eur':  if (daily.bcvEurRate > 0) return daily.bcvEurRate; break;
+    }
+  }
+
+  // Fall back to monthly rates
+  const monthly = rateStore.getRates(month - 1, year); // 0-indexed
+  switch (currency) {
+    case 'usdt': if (monthly.p2pRate > 0) return monthly.p2pRate; break;
+    case 'bsc':  if (monthly.bcvUsdRate > 0) return monthly.bcvUsdRate; break;
+    case 'eur':  if (monthly.bcvEurRate > 0) return monthly.bcvEurRate; break;
+  }
+
+  // Final fallback: if budget is USDT, use budgetRate for USDT transactions
+  const prefs = usePreferencesStore.getState();
+  if (prefs.budgetCurrency === 'USDT' && currency === 'usdt' && prefs.budgetRate > 0) {
+    return prefs.budgetRate;
+  }
+
+  return 0;
+}
+
+/**
+ * Compute priceCalculated (Bs equivalent) from amount + currency + rate.
+ * For 'bs': priceCalculated = amount (no conversion).
+ * For others: priceCalculated = amount × rate.
+ */
+function computePriceCalculated(amount: number, currency: string, rate: number): number {
+  if (currency === 'bs') return amount;
+  if (rate > 0) return amount * rate;
+  return 0; // no rate available
+}
 
 interface TransactionState {
   // Data
@@ -69,25 +109,17 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
   loadMonthlySummary: async () => {
     const { selectedYear, selectedMonth } = get();
-
-    // Fetch transactions + rates in parallel
-    const [transactions] = await Promise.all([
-      db.getTransactionsByMonth(selectedYear, selectedMonth),
-    ]);
-
-    // Get rates from the rate store (uses in-memory cache + DB).
-    // Rate store uses 0-indexed months, but selectedMonth is 1-indexed.
-    const rates = useRateStore.getState().getRates(selectedMonth - 1, selectedYear);
+    const transactions = await db.getTransactionsByMonth(selectedYear, selectedMonth);
 
     let totalIncome = 0;
     let totalExpense = 0;
 
     for (const tx of transactions) {
-      const bsAmount = toBsEquivalent(tx.amount, tx.currency, rates);
+      // Simply use the pre-computed Bs amount
       if (tx.type === 'income') {
-        totalIncome += bsAmount;
+        totalIncome += tx.priceCalculated;
       } else {
-        totalExpense += bsAmount;
+        totalExpense += tx.priceCalculated;
       }
     }
 
@@ -104,13 +136,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   loadCategorySummaries: async () => {
     const { selectedYear, selectedMonth } = get();
 
-    // Fetch transactions; get rates from rate store (in-memory cache)
-    const [transactions] = await Promise.all([
-      db.getTransactionsByMonth(selectedYear, selectedMonth),
-    ]);
-    const rates = useRateStore.getState().getRates(selectedMonth - 1, selectedYear);
+    const transactions = await db.getTransactionsByMonth(selectedYear, selectedMonth);
 
-    // Compute per-category totals with USDT conversion
     const incomeMap = new Map<
       number,
       { name: string; icon: string; color: string; total: number; currencies: Set<string> }
@@ -122,12 +149,12 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     let grandIncome = 0;
     let grandExpense = 0;
 
-    // We need category info — fetch it
     const allCategories = await db.getAllCategories();
     const catInfo = new Map(allCategories.map((c) => [c.id, c]));
 
     for (const tx of transactions) {
-      const bsAmount = toBsEquivalent(tx.amount, tx.currency, rates);
+      // Simply use the pre-computed Bs amount
+      const bsAmount = tx.priceCalculated;
       const info = catInfo.get(tx.categoryId);
       const name = info?.name ?? 'Sin categoría';
       const icon = info?.icon ?? 'circle-question-mark';
@@ -160,7 +187,6 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       }
     }
 
-    // Determine dominant currency: if all txs same currency, use it; else 'mixed'
     const dominantCurrency = (currencies: Set<string>): string => {
       if (currencies.size === 1) return [...currencies][0];
       return 'mixed';
@@ -198,7 +224,19 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   },
 
   addTransaction: async (data: TransactionFormData) => {
-    await db.createTransaction(data);
+    const currency = data.currency ?? 'bsc';
+    const rate = await resolveExchangeRate(data.date, currency);
+    const priceOriginal = data.amount;
+    const priceCalculated = computePriceCalculated(data.amount, currency, rate);
+
+    const txToSave = {
+      ...data,
+      currency,
+      priceOriginal,
+      priceCalculated,
+    };
+
+    await db.createTransaction(txToSave);
     await Promise.all([
       get().loadTransactions(),
       get().loadMonthlySummary(),
@@ -207,14 +245,23 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   },
 
   editTransaction: async (id: number, data: Partial<TransactionFormData>) => {
-    await db.updateTransaction(id, {
+    const currency = data.currency ?? 'bsc';
+    const rate = await resolveExchangeRate(data.date ?? '', currency);
+    const priceOriginal = data.amount ?? 0;
+    const priceCalculated = computePriceCalculated(priceOriginal, currency, rate);
+
+    const txToUpdate = {
       amount: data.amount,
       type: data.type,
       categoryId: data.categoryId,
       description: data.description,
       date: data.date,
-      currency: data.currency,
-    });
+      currency,
+      priceOriginal,
+      priceCalculated,
+    };
+
+    await db.updateTransaction(id, txToUpdate);
     await Promise.all([
       get().loadTransactions(),
       get().loadMonthlySummary(),

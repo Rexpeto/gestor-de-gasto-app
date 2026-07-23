@@ -15,6 +15,7 @@ import { useRateStore } from "@/store/rate-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import { budgetToBs, bsToUsdt, bsToUsd, bsToEur } from "@/utils/currency";
+import { upsertDailyRate } from "@/db/database";
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
@@ -42,9 +43,9 @@ export default function FiscalScreen() {
     );
     const [budgetValue, setBudgetValue] = useState("");
     const [budgetRateValue, setBudgetRateValue] = useState("");
-    const [p2pRate, setP2pRate] = useState("");
     const [bcvUsdRate, setBcvUsdRate] = useState("");
     const [bcvEurRate, setBcvEurRate] = useState("");
+    const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
     // ── Effects ──
 
@@ -76,12 +77,11 @@ export default function FiscalScreen() {
             setBudgetRateValue(bcvUsdRate);
         } else if (budgetCurrency === "€" && bcvEurRate) {
             setBudgetRateValue(bcvEurRate);
-        } else if (budgetCurrency === "USDT" && p2pRate) {
-            setBudgetRateValue(p2pRate);
         } else if (budgetCurrency === "Bs") {
             setBudgetRateValue("");
         }
-    }, [budgetCurrency, bcvUsdRate, bcvEurRate, p2pRate]);
+        // USDT: user enters the rate manually
+    }, [budgetCurrency, bcvUsdRate, bcvEurRate]);
 
     // When store rates are loaded or month changes, populate inputs
     useEffect(() => {
@@ -89,11 +89,9 @@ export default function FiscalScreen() {
         const key = `${selectedMonth}-${selectedYear}`;
         const rates = storeRatesByMonth[key];
         if (rates) {
-            setP2pRate(String(rates.p2pRate || ""));
             setBcvUsdRate(String(rates.bcvUsdRate || ""));
             setBcvEurRate(String(rates.bcvEurRate || ""));
         } else {
-            setP2pRate("");
             setBcvUsdRate("");
             setBcvEurRate("");
         }
@@ -102,17 +100,17 @@ export default function FiscalScreen() {
     // ── Conversion lines ──
 
     function buildConversionLines() {
-        const p2p = parseFloat(p2pRate) || 0;
         const bcvUsd = parseFloat(bcvUsdRate) || 0;
         const bcvEur = parseFloat(bcvEurRate) || 0;
         const budget = parseFloat(budgetValue) || 0;
-        const rates = { p2pRate: p2p, bcvUsdRate: bcvUsd, bcvEurRate: bcvEur };
+        const budgetRate = parseFloat(budgetRateValue) || 0;
+        const rates = { p2pRate: budgetRate, bcvUsdRate: bcvUsd, bcvEurRate: bcvEur };
 
         const hasData =
             budget > 0 &&
             (budgetCurrency === "USDT"
-                ? p2p > 0
-                : bcvUsd > 0 || bcvEur > 0 || p2p > 0);
+                ? budgetRate > 0
+                : bcvUsd > 0 || bcvEur > 0);
 
         if (!hasData) return undefined;
 
@@ -129,7 +127,7 @@ export default function FiscalScreen() {
         }
 
         // Show conversions from Bs to other currencies
-        if (budgetCurrency !== "USDT" && p2p > 0) {
+        if (budgetCurrency !== "USDT" && budgetRate > 0) {
             lines.push({ label: "USDT (P2P)", value: `${fmt(bsToUsdt(budgetInBs, rates))} USDT` });
         }
         if (budgetCurrency !== "$" && bcvUsd > 0) {
@@ -163,15 +161,23 @@ export default function FiscalScreen() {
             await setBudgetRate(rate);
 
             const year = parseInt(selectedYear, 10);
-            const p2p = parseFloat(p2pRate) || 0;
             const bcvUsd = parseFloat(bcvUsdRate) || 0;
             const bcvEur = parseFloat(bcvEurRate) || 0;
-            if (p2p > 0 || bcvUsd > 0 || bcvEur > 0) {
+            if (bcvUsd > 0 || bcvEur > 0) {
                 await setRates(selectedMonth, year, {
-                    p2pRate: p2p,
+                    p2pRate: budgetCurrency === "USDT" ? rate : 0,
                     bcvUsdRate: bcvUsd,
                     bcvEurRate: bcvEur,
                 });
+            }
+
+            // Also save daily rate for the selected day (non-critical)
+            if (selectedDay) {
+                await upsertDailyRate(selectedDay, {
+                    p2pRate: budgetCurrency === "USDT" ? rate : 0,
+                    bcvUsdRate: bcvUsd,
+                    bcvEurRate: bcvEur,
+                }).catch(() => {});
             }
 
             await Promise.all([
@@ -180,8 +186,7 @@ export default function FiscalScreen() {
             ]);
 
             showSuccessToast("Configuración guardada correctamente");
-        } catch (e) {
-            console.error("[fiscal] handleSave error:", e);
+        } catch {
             showErrorToast("Error al guardar la configuración");
         }
     }
@@ -207,8 +212,8 @@ export default function FiscalScreen() {
                     onCurrencyChange={setBudgetCurrency}
                 />
 
-                {/* Show rate field when $ or € is selected */}
-                {(budgetCurrency === "$" || budgetCurrency === "€") && (
+                {/* Show rate field when $, €, or USDT is selected */}
+                {(budgetCurrency === "$" || budgetCurrency === "€" || budgetCurrency === "USDT") && (
                     <>
                         <Text
                             style={{
@@ -223,10 +228,17 @@ export default function FiscalScreen() {
                             Tasa de Cambio
                         </Text>
                         <RateInputRow
-                            label={budgetCurrency === "$" ? "Dólar BCV (Bs.)" : "Euro BCV (Bs.)"}
+                            label={
+                                budgetCurrency === "$"
+                                    ? "Dólar BCV (Bs.)"
+                                    : budgetCurrency === "€"
+                                        ? "Euro BCV (Bs.)"
+                                        : "USDT / Bs (P2P)"
+                            }
                             subtitle="Tasa al guardar"
                             value={budgetRateValue}
                             onChangeText={setBudgetRateValue}
+                            highlighted={budgetCurrency === "USDT"}
                         />
                     </>
                 )}
@@ -269,12 +281,11 @@ export default function FiscalScreen() {
                 <RateCalendar
                     month={selectedMonth}
                     year={parseInt(selectedYear, 10)}
-                    p2pRate={p2pRate}
                     bcvUsdRate={bcvUsdRate}
                     bcvEurRate={bcvEurRate}
-                    onP2pRateChange={setP2pRate}
                     onBcvUsdRateChange={setBcvUsdRate}
                     onBcvEurRateChange={setBcvEurRate}
+                    onDayChange={setSelectedDay}
                     conversionLines={buildConversionLines()}
                 />
             </GlassCard>

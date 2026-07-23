@@ -5,6 +5,7 @@ import { useThemeColors } from "@/store/theme-store";
 import { useBcvRates } from "@/hooks/useBcvRates";
 import { RateInputRow } from "./RateInputRow";
 import { ConversionSummary } from "./ConversionSummary";
+import { CalendarSkeleton } from "@/components/Skeleton";
 
 // ── Spanish locale for react-native-calendars ──
 LocaleConfig.locales["es"] = {
@@ -32,13 +33,11 @@ const MONTHS = [
 interface RateCalendarProps {
     month: number; // 0-indexed
     year: number;
-    p2pRate: string;
     bcvUsdRate: string;
     bcvEurRate: string;
-    onP2pRateChange: (rate: string) => void;
     onBcvUsdRateChange: (rate: string) => void;
     onBcvEurRateChange: (rate: string) => void;
-    onDayChange?: () => void;
+    onDayChange?: (date: string) => void;
     conversionLines?: { label: string; value: string; highlighted?: boolean }[];
 }
 
@@ -49,10 +48,8 @@ interface RateCalendarProps {
 export function RateCalendar({
     month,
     year,
-    p2pRate,
     bcvUsdRate,
     bcvEurRate,
-    onP2pRateChange,
     onBcvUsdRateChange,
     onBcvEurRateChange,
     onDayChange,
@@ -60,6 +57,7 @@ export function RateCalendar({
 }: RateCalendarProps) {
     const colors = useThemeColors();
     const { ratesByDate, isLoading } = useBcvRates();
+    const hasData = Object.keys(ratesByDate).length > 0;
 
     // Auto-select today's date on mount
     const today = new Date();
@@ -119,7 +117,7 @@ export function RateCalendar({
             if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
             if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
         }
-        onDayChange?.();
+        onDayChange?.(day.dateString);
     }
 
     const isCurrentMonth =
@@ -152,167 +150,146 @@ export function RateCalendar({
                 >
                     {MONTHS[month]} {year}
                 </Text>
-                {isLoading && (
-                    <Text
-                        style={{
-                            fontFamily: "Inter",
-                            fontSize: 12,
-                            color: colors.outline,
-                        }}
-                    >
-                        Cargando tasas...
-                    </Text>
+                {isLoading && !hasData && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, opacity: 0.6 }} />
+                        <Text
+                            style={{
+                                fontFamily: "Inter",
+                                fontSize: 12,
+                                color: colors.outline,
+                            }}
+                        >
+                            Sincronizando tasas...
+                        </Text>
+                    </View>
                 )}
             </View>
 
-            {/* Legend */}
-            <View
-                style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 12,
-                    marginBottom: 12,
-                }}
-            >
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                    }}
-                >
+            {/* Skeleton while loading — or full calendar content */}
+            {isLoading && !hasData ? (
+                <CalendarSkeleton />
+            ) : (
+                <>
+                    {/* Legend */}
                     <View
                         style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: colors.success,
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontFamily: "Inter",
-                            fontSize: 11,
-                            color: colors.outline,
-                        }}
-                    >
-                        Datos disponibles
-                    </Text>
-                </View>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                    }}
-                >
-                    <View
-                        style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            borderWidth: 1,
-                            borderColor: colors.primary,
-                        }}
-                    />
-                    <Text
-                        style={{
-                            fontFamily: "Inter",
-                            fontSize: 11,
-                            color: colors.outline,
-                        }}
-                    >
-                        Hoy
-                    </Text>
-                </View>
-            </View>
-
-            {/* Calendar */}
-            <Calendar
-                key={calendarKey}
-                current={`${year}-${String(month + 1).padStart(2, "0")}-01`}
-                onDayPress={handleDayPress}
-                markedDates={markedDates}
-                maxDate={maxDate}
-                theme={{
-                    backgroundColor: "transparent",
-                    calendarBackground: "transparent",
-                    textSectionTitleColor: colors.outline,
-                    selectedDayBackgroundColor: colors.primary,
-                    selectedDayTextColor: "#ffffff",
-                    todayTextColor: colors.primary,
-                    dayTextColor: colors.onSurface,
-                    textDisabledColor: `${colors.outline}60`,
-                    dotColor: colors.success,
-                    selectedDotColor: "#ffffff",
-                    arrowColor: colors.primary,
-                    monthTextColor: colors.onSurface,
-                    textMonthFontFamily: "Inter",
-                    textDayFontFamily: "Inter",
-                    textDayHeaderFontFamily: "Inter",
-                    textMonthFontWeight: "600",
-                    textDayFontSize: 14,
-                    textMonthFontSize: 16,
-                    textDayHeaderFontSize: 12,
-                }}
-            />
-
-            {/* Selected day section */}
-            {selectedDate && (
-                <View
-                    style={{
-                        marginTop: 16,
-                        padding: 16,
-                        borderRadius: 12,
-                        backgroundColor: colors.glassSurface,
-                        borderWidth: 1,
-                        borderColor: colors.glassBorder,
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: "Inter",
-                            fontSize: 14,
-                            fontWeight: "600",
-                            color: colors.onSurface,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 12,
                             marginBottom: 12,
                         }}
                     >
-                        {Number(selectedDate.split("-")[2])} de{" "}
-                        {MONTHS[month]} {year}
-                    </Text>
-
-                    <View style={{ gap: 8 }}>
-                        <RateInputRow
-                            label="Dólar BCV (Bs.)"
-                            subtitle="Oficial BCV"
-                            value={bcvUsdRate}
-                            onChangeText={onBcvUsdRateChange}
-                        />
-                        <RateInputRow
-                            label="Euro BCV (Bs.)"
-                            subtitle="Oficial BCV"
-                            value={bcvEurRate}
-                            onChangeText={onBcvEurRateChange}
-                        />
-                        <RateInputRow
-                            label="Dólar P2P (Bs.)"
-                            subtitle="Referencia Binance"
-                            value={p2pRate}
-                            onChangeText={onP2pRateChange}
-                            highlighted
-                        />
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View
+                                style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    backgroundColor: colors.success,
+                                }}
+                            />
+                            <Text style={{ fontFamily: "Inter", fontSize: 11, color: colors.outline }}>
+                                Datos disponibles
+                            </Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View
+                                style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    borderWidth: 1,
+                                    borderColor: colors.primary,
+                                }}
+                            />
+                            <Text style={{ fontFamily: "Inter", fontSize: 11, color: colors.outline }}>
+                                Hoy
+                            </Text>
+                        </View>
                     </View>
 
-                    {conversionLines && conversionLines.length > 0 && (
-                        <View style={{ marginTop: 16 }}>
-                            <ConversionSummary
-                                title="Resumen de Conversión"
-                                lines={conversionLines}
-                            />
+                    {/* Calendar */}
+                    <Calendar
+                        key={calendarKey}
+                        current={`${year}-${String(month + 1).padStart(2, "0")}-01`}
+                        onDayPress={handleDayPress}
+                        markedDates={markedDates}
+                        maxDate={maxDate}
+                        theme={{
+                            backgroundColor: "transparent",
+                            calendarBackground: "transparent",
+                            textSectionTitleColor: colors.outline,
+                            selectedDayBackgroundColor: colors.primary,
+                            selectedDayTextColor: "#ffffff",
+                            todayTextColor: colors.primary,
+                            dayTextColor: colors.onSurface,
+                            textDisabledColor: `${colors.outline}60`,
+                            dotColor: colors.success,
+                            selectedDotColor: "#ffffff",
+                            arrowColor: colors.primary,
+                            monthTextColor: colors.onSurface,
+                            textMonthFontFamily: "Inter",
+                            textDayFontFamily: "Inter",
+                            textDayHeaderFontFamily: "Inter",
+                            textMonthFontWeight: "600",
+                            textDayFontSize: 14,
+                            textMonthFontSize: 16,
+                            textDayHeaderFontSize: 12,
+                        }}
+                    />
+
+                    {/* Selected day section */}
+                    {selectedDate && (
+                        <View
+                            style={{
+                                marginTop: 16,
+                                padding: 16,
+                                borderRadius: 12,
+                                backgroundColor: colors.glassSurface,
+                                borderWidth: 1,
+                                borderColor: colors.glassBorder,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: "Inter",
+                                    fontSize: 14,
+                                    fontWeight: "600",
+                                    color: colors.onSurface,
+                                    marginBottom: 12,
+                                }}
+                            >
+                                {Number(selectedDate.split("-")[2])} de{" "}
+                                {MONTHS[month]} {year}
+                            </Text>
+
+                            <View style={{ gap: 8 }}>
+                                <RateInputRow
+                                    label="Dólar BCV (Bs.)"
+                                    subtitle="Oficial BCV"
+                                    value={bcvUsdRate}
+                                    onChangeText={onBcvUsdRateChange}
+                                />
+                                <RateInputRow
+                                    label="Euro BCV (Bs.)"
+                                    subtitle="Oficial BCV"
+                                    value={bcvEurRate}
+                                    onChangeText={onBcvEurRateChange}
+                                />
+                            </View>
+
+                            {conversionLines && conversionLines.length > 0 && (
+                                <View style={{ marginTop: 16 }}>
+                                    <ConversionSummary
+                                        title="Resumen de Conversión"
+                                        lines={conversionLines}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
-                </View>
+                </>
             )}
         </View>
     );

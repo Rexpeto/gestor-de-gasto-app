@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useThemeColors } from '@/store/theme-store';
 
 const PAYMENT_METHODS = [
+  { id: 'bs', label: 'Bs' },
   { id: 'bsc', label: '$ BCV' },
   { id: 'eur', label: '€ BCV' },
   { id: 'usdt', label: 'USDT' },

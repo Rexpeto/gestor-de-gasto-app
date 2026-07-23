@@ -3,6 +3,7 @@ import * as SQLite from 'expo-sqlite';
 
 import type {
     Category,
+    DailyRates,
     MonthlyRates,
     Transaction,
     TransactionType,
@@ -94,6 +95,9 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       description TEXT DEFAULT '',
       date TEXT NOT NULL,
       currency TEXT NOT NULL DEFAULT 'bsc',
+      exchange_rate REAL NOT NULL DEFAULT 0,
+      price_original REAL NOT NULL DEFAULT 0,
+      price_calculated REAL NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -191,6 +195,82 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     }
     await database.runAsync(
       'INSERT OR REPLACE INTO _migrations (version) VALUES (6)'
+    );
+  }
+
+  // Migration v7: daily exchange rates table
+  const currentVersionV7 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV7?.version || currentVersionV7.version < 7) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS daily_rates (
+        date TEXT PRIMARY KEY NOT NULL,
+        p2p_rate REAL NOT NULL DEFAULT 0,
+        bcv_usd_rate REAL NOT NULL DEFAULT 0,
+        bcv_eur_rate REAL NOT NULL DEFAULT 0
+      )
+    `);
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (7)'
+    );
+  }
+
+  // Migration v8: exchange_rate column on transactions
+  const currentVersionV8 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV8?.version || currentVersionV8.version < 8) {
+    const cols = await database.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(transactions)"
+    );
+    const hasExchangeRate = cols.some((c) => c.name === 'exchange_rate');
+    if (!hasExchangeRate) {
+      await database.execAsync(`
+        ALTER TABLE transactions ADD COLUMN exchange_rate REAL NOT NULL DEFAULT 0
+      `);
+    }
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (8)'
+    );
+  }
+
+  // Migration v9: price_original + price_calculated columns
+  const currentVersionV9 = await database.getFirstAsync<{ version: number }>(
+    'SELECT MAX(version) as version FROM _migrations'
+  );
+  if (!currentVersionV9?.version || currentVersionV9.version < 9) {
+    const cols = await database.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(transactions)"
+    );
+    const hasPriceOriginal = cols.some((c) => c.name === 'price_original');
+    const hasPriceCalculated = cols.some((c) => c.name === 'price_calculated');
+
+    if (!hasPriceOriginal) {
+      await database.execAsync(`
+        ALTER TABLE transactions ADD COLUMN price_original REAL NOT NULL DEFAULT 0
+      `);
+    }
+    if (!hasPriceCalculated) {
+      await database.execAsync(`
+        ALTER TABLE transactions ADD COLUMN price_calculated REAL NOT NULL DEFAULT 0
+      `);
+    }
+
+    // Backfill: price_original = amount, price_calculated = amount × exchange_rate
+    await database.execAsync(`
+      UPDATE transactions
+      SET price_original = amount,
+          price_calculated = CASE
+            WHEN exchange_rate > 0 THEN amount * exchange_rate
+            WHEN currency = 'bs' THEN amount
+            ELSE 0
+          END
+      WHERE price_original = 0
+    `);
+
+    await database.runAsync(
+      'INSERT OR REPLACE INTO _migrations (version) VALUES (9)'
     );
   }
 }
@@ -324,6 +404,8 @@ export async function getAllTransactions(): Promise<Transaction[]> {
     description: string;
     date: string;
     currency: string;
+    price_original: number;
+    price_calculated: number;
     created_at: string;
   }>(
     'SELECT t.* FROM transactions t ORDER BY t.date DESC, t.created_at DESC'
@@ -346,6 +428,8 @@ export async function getTransactionsByMonth(
     description: string;
     date: string;
     currency: string;
+    price_original: number;
+    price_calculated: number;
     created_at: string;
   }>(
     "SELECT t.* FROM transactions t WHERE t.date LIKE ? ORDER BY t.date DESC, t.created_at DESC",
@@ -362,11 +446,22 @@ export async function createTransaction(params: {
   description: string;
   date: string;
   currency?: string;
+  priceOriginal?: number;
+  priceCalculated?: number;
 }): Promise<Transaction> {
   const database = await getDatabase();
   const result = await database.runAsync(
-    'INSERT INTO transactions (amount, type, category_id, description, date, currency) VALUES (?, ?, ?, ?, ?, ?)',
-    [params.amount, params.type, params.categoryId, params.description, params.date, params.currency ?? 'bsc']
+    'INSERT INTO transactions (amount, type, category_id, description, date, currency, price_original, price_calculated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      params.amount,
+      params.type,
+      params.categoryId,
+      params.description,
+      params.date,
+      params.currency ?? 'bsc',
+      params.priceOriginal ?? params.amount,
+      params.priceCalculated ?? params.amount,
+    ]
   );
 
   const row = await database.getFirstAsync<{
@@ -377,6 +472,8 @@ export async function createTransaction(params: {
     description: string;
     date: string;
     currency: string;
+    price_original: number;
+    price_calculated: number;
     created_at: string;
   }>('SELECT * FROM transactions WHERE id = ?', [result.lastInsertRowId]);
 
@@ -393,6 +490,8 @@ export async function updateTransaction(
     description: string;
     date: string;
     currency?: string;
+    priceOriginal?: number;
+    priceCalculated?: number;
   }>
 ): Promise<void> {
   const database = await getDatabase();
@@ -425,6 +524,14 @@ export async function updateTransaction(
   if (params.currency !== undefined) {
     sets.push('currency = ?');
     bindings.push(params.currency);
+  }
+  if (params.priceOriginal !== undefined) {
+    sets.push('price_original = ?');
+    bindings.push(params.priceOriginal);
+  }
+  if (params.priceCalculated !== undefined) {
+    sets.push('price_calculated = ?');
+    bindings.push(params.priceCalculated);
   }
 
   bindings.push(id);
@@ -696,6 +803,95 @@ export async function getAllMonthlyRates(): Promise<MonthlyRates[]> {
     }));
 }
 
+// ─── Daily Rates ──────────────────────────────────────────────
+
+type DailyRateRow = {
+  p2p_rate: number;
+  bcv_usd_rate: number;
+  bcv_eur_rate: number;
+};
+
+function mapDailyRate(row: DailyRateRow): {
+  p2pRate: number;
+  bcvUsdRate: number;
+  bcvEurRate: number;
+} {
+  return {
+    p2pRate: row.p2p_rate,
+    bcvUsdRate: row.bcv_usd_rate,
+    bcvEurRate: row.bcv_eur_rate,
+  };
+}
+
+export async function upsertDailyRate(
+  date: string,
+  rates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number },
+): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    `INSERT INTO daily_rates (date, p2p_rate, bcv_usd_rate, bcv_eur_rate)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET
+       p2p_rate = excluded.p2p_rate,
+       bcv_usd_rate = excluded.bcv_usd_rate,
+       bcv_eur_rate = excluded.bcv_eur_rate`,
+    [date, rates.p2pRate, rates.bcvUsdRate, rates.bcvEurRate],
+  );
+}
+
+export async function getDailyRateForDate(
+  date: string,
+): Promise<{ p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<DailyRateRow>(
+    'SELECT p2p_rate, bcv_usd_rate, bcv_eur_rate FROM daily_rates WHERE date = ?',
+    [date],
+  );
+  return row ? mapDailyRate(row) : null;
+}
+
+export async function getDailyRatesForMonth(
+  year: number,
+  month: number,
+): Promise<Map<string, { p2pRate: number; bcvUsdRate: number; bcvEurRate: number }>> {
+  const database = await getDatabase();
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  const rows = await database.getAllAsync<
+    DailyRateRow & { date: string }
+  >(
+    'SELECT date, p2p_rate, bcv_usd_rate, bcv_eur_rate FROM daily_rates WHERE date LIKE ?',
+    [`${prefix}%`],
+  );
+
+  const map = new Map<string, { p2pRate: number; bcvUsdRate: number; bcvEurRate: number }>();
+  for (const row of rows) {
+    map.set(row.date, mapDailyRate(row));
+  }
+  return map;
+}
+
+export async function upsertDailyRates(
+  rates: Array<{
+    date: string;
+    p2pRate: number;
+    bcvUsdRate: number;
+    bcvEurRate: number;
+  }>,
+): Promise<void> {
+  const database = await getDatabase();
+  for (const r of rates) {
+    await database.runAsync(
+      `INSERT INTO daily_rates (date, p2p_rate, bcv_usd_rate, bcv_eur_rate)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET
+         p2p_rate = excluded.p2p_rate,
+         bcv_usd_rate = excluded.bcv_usd_rate,
+         bcv_eur_rate = excluded.bcv_eur_rate`,
+      [r.date, r.p2pRate, r.bcvUsdRate, r.bcvEurRate],
+    );
+  }
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export async function getSetting(key: string): Promise<string | null> {
@@ -725,6 +921,8 @@ function mapTransaction(row: {
   description: string;
   date: string;
   currency: string;
+  price_original: number;
+  price_calculated: number;
   created_at: string;
 }): Transaction {
   return {
@@ -735,6 +933,8 @@ function mapTransaction(row: {
     description: row.description ?? '',
     date: row.date,
     currency: row.currency,
+    priceOriginal: row.price_original ?? row.amount,
+    priceCalculated: row.price_calculated ?? 0,
     createdAt: row.created_at,
   };
 }
@@ -756,6 +956,7 @@ export async function resetDatabase(): Promise<void> {
     DROP TABLE IF EXISTS transactions;
     DROP TABLE IF EXISTS categories;
     DROP TABLE IF EXISTS monthly_rates;
+    DROP TABLE IF EXISTS daily_rates;
     DROP TABLE IF EXISTS settings;
     DROP TABLE IF EXISTS _migrations;
   `);
@@ -780,6 +981,9 @@ export async function resetDatabase(): Promise<void> {
       description TEXT DEFAULT '',
       date TEXT NOT NULL,
       currency TEXT NOT NULL DEFAULT 'bsc',
+      exchange_rate REAL NOT NULL DEFAULT 0,
+      price_original REAL NOT NULL DEFAULT 0,
+      price_calculated REAL NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -795,6 +999,13 @@ export async function resetDatabase(): Promise<void> {
       bcv_usd_rate REAL NOT NULL DEFAULT 0,
       bcv_eur_rate REAL NOT NULL DEFAULT 0,
       UNIQUE(month, year)
+    );
+
+    CREATE TABLE IF NOT EXISTS daily_rates (
+      date TEXT PRIMARY KEY NOT NULL,
+      p2p_rate REAL NOT NULL DEFAULT 0,
+      bcv_usd_rate REAL NOT NULL DEFAULT 0,
+      bcv_eur_rate REAL NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -866,6 +1077,12 @@ export interface ExportData {
     bcvUsdRate: number;
     bcvEurRate: number;
   }>;
+  dailyRates: Array<{
+    date: string;
+    p2pRate: number;
+    bcvUsdRate: number;
+    bcvEurRate: number;
+  }>;
   settings: Array<{
     key: string;
     value: string;
@@ -905,6 +1122,13 @@ export async function exportDatabase(): Promise<string> {
     bcv_eur_rate: number;
   }>('SELECT * FROM monthly_rates ORDER BY year, month');
 
+  const dailyRates = await database.getAllAsync<{
+    date: string;
+    p2p_rate: number;
+    bcv_usd_rate: number;
+    bcv_eur_rate: number;
+  }>('SELECT * FROM daily_rates ORDER BY date');
+
   const settings = await database.getAllAsync<{
     key: string;
     value: string;
@@ -942,6 +1166,12 @@ export async function exportDatabase(): Promise<string> {
       bcvUsdRate: r.bcv_usd_rate,
       bcvEurRate: r.bcv_eur_rate,
     })),
+    dailyRates: dailyRates.map((r) => ({
+      date: r.date,
+      p2pRate: r.p2p_rate,
+      bcvUsdRate: r.bcv_usd_rate,
+      bcvEurRate: r.bcv_eur_rate,
+    })),
     settings: settings.map((s) => ({
       key: s.key,
       value: s.value,
@@ -963,6 +1193,7 @@ export async function importDatabase(json: string): Promise<void> {
     DELETE FROM transactions;
     DELETE FROM categories;
     DELETE FROM monthly_rates;
+    DELETE FROM daily_rates;
     DELETE FROM settings;
   `);
 
@@ -981,8 +1212,8 @@ export async function importDatabase(json: string): Promise<void> {
     const categoryId = catNameToId.get(tx.categoryName);
     if (!categoryId) continue; // skip if category not found
     await database.runAsync(
-      'INSERT INTO transactions (amount, type, category_id, description, date, currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.currency ?? 'bsc', tx.createdAt],
+      'INSERT INTO transactions (amount, type, category_id, description, date, currency, price_original, price_calculated, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.currency ?? 'bsc', tx.amount, 0, tx.createdAt],
     );
   }
 
@@ -992,6 +1223,15 @@ export async function importDatabase(json: string): Promise<void> {
       `INSERT INTO monthly_rates (month, year, p2p_rate, bcv_usd_rate, bcv_eur_rate)
        VALUES (?, ?, ?, ?, ?)`,
       [r.month, r.year, r.p2pRate, r.bcvUsdRate, r.bcvEurRate],
+    );
+  }
+
+  // Insert daily rates
+  for (const r of data.dailyRates ?? []) {
+    await database.runAsync(
+      `INSERT INTO daily_rates (date, p2p_rate, bcv_usd_rate, bcv_eur_rate)
+       VALUES (?, ?, ?, ?)`,
+      [r.date, r.p2pRate, r.bcvUsdRate, r.bcvEurRate],
     );
   }
 

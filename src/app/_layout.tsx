@@ -23,6 +23,7 @@ import { useTransactionStore } from '@/store/transaction-store';
 import { useCategoryStore } from '@/store/category-store';
 import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useSheetStore } from '@/store/sheet-store';
+import { fetchAndPersistBcvRates } from '@/services/bcv-rates';
 
 const queryClient = new QueryClient();
 
@@ -56,12 +57,22 @@ export default function RootLayout() {
           Inter: require('@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'),
           'Inter-SemiBold': require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
           'Inter-Bold': require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
-        }).catch(() => {
-          console.warn('⚠️ Inter not loaded, using system font');
-        });
+        }).catch(() => {});
 
         // Load rates first so summaries can use them for currency conversion
         await loadRates();
+
+        // Fire-and-forget: prefetch fresh BCV rates via React Query
+        // This populates the cache so useBcvRates() doesn't re-fetch
+        queryClient.prefetchQuery({
+          queryKey: ['bcv-rates'],
+          queryFn: fetchAndPersistBcvRates,
+          staleTime: 1000 * 60 * 60,
+        }).then(() => {
+          // Reload daily rates cache in memory after API fetch
+          const now = new Date();
+          useRateStore.getState().loadDailyRates(now.getFullYear(), now.getMonth() + 1);
+        }).catch(() => {});
 
         await Promise.all([
           loadCategories(),
@@ -70,8 +81,7 @@ export default function RootLayout() {
           loadCategorySummaries(),
           loadPreferences(),
         ]);
-      } catch (e) {
-        console.warn('Error loading initial data:', e);
+      } catch {
       } finally {
         setAppIsReady(true);
       }

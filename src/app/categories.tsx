@@ -38,7 +38,6 @@ export default function CategoriesScreen() {
 
   const handleEdit = (catId: number) => {
     // TODO: add-category screen doesn't support editing yet
-    console.log('Edit category:', catId);
   };
 
   return (

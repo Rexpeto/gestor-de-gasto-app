@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
@@ -40,8 +39,13 @@ export default function DashboardScreen() {
         [categories],
     );
 
-    const recentTransactions = useMemo(
-        () => transactions.slice(0, 5),
+    const expenseTransactions = useMemo(
+        () => transactions.filter((t) => t.type === "expense"),
+        [transactions],
+    );
+
+    const incomeTransactions = useMemo(
+        () => transactions.filter((t) => t.type === "income"),
         [transactions],
     );
 
@@ -107,6 +111,9 @@ export default function DashboardScreen() {
                 rateStore.loadRates(),
                 prefsStore.loadPreferences(),
             ]);
+            // Pre-load daily rates for the current month
+            const now = new Date();
+            await rateStore.loadDailyRates(now.getFullYear(), now.getMonth() + 1);
             setRefreshKey((k) => k + 1);
         } finally {
             setRefreshing(false);
@@ -146,16 +153,31 @@ export default function DashboardScreen() {
                     onExpensePress={() => openSheet("expense")}
                 />
 
-                {/* ── Transacciones Recientes ── */}
+                {/* ── Gastos del mes ── */}
                 <RecentTransactions
-                    transactions={recentTransactions}
+                    title="Gastos del mes"
+                    transactions={expenseTransactions}
                     isLoading={isLoading}
                     colors={colors}
                     onEditTransaction={handleEditTransaction}
                     onDeleteTransaction={handleDeleteTransaction}
                     onTransactionPress={handleTransactionPress}
                     onAddFirstTransaction={() => openSheet("expense")}
-                    onNavigateToTransactions={() => router.push("/(tabs)/transactions")}
+                    emptyMessage="No hay gastos este mes"
+                    getCategoryInfo={getCategoryInfo}
+                />
+
+                {/* ── Ingresos extra del mes ── */}
+                <RecentTransactions
+                    title="Ingresos extra del mes"
+                    transactions={incomeTransactions}
+                    isLoading={isLoading}
+                    colors={colors}
+                    onEditTransaction={handleEditTransaction}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    onTransactionPress={handleTransactionPress}
+                    onAddFirstTransaction={() => openSheet("income")}
+                    emptyMessage="No hay ingresos este mes"
                     getCategoryInfo={getCategoryInfo}
                 />
 

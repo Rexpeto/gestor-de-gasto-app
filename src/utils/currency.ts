@@ -65,6 +65,47 @@ export function budgetToBs(
   }
 }
 
+// ── Per-date conversion (daily rate → monthly fallback) ──
+
+/**
+ * Convert transaction amount to Bs using daily rate if available,
+ * falling back to monthly rates.
+ *
+ * This is the function used by transaction summaries when daily_rates
+ * data is available — each transaction uses the rate for its specific date
+ * instead of a single monthly average.
+ */
+export function toBsEquivalentFromDate(
+  amount: number,
+  currency: string,
+  dailyRates: { p2pRate: number; bcvUsdRate: number; bcvEurRate: number } | null,
+  monthlyRates: Rates | null,
+): number {
+  const rates = dailyRates ?? monthlyRates;
+  return toBsEquivalent(amount, currency, rates);
+}
+
+/**
+ * Convert transaction amount to Bs using a stored exchange rate.
+ *
+ * This is the PRIMARY conversion path: each transaction stores the exact
+ * rate from the day it was created. Use this instead of looking up rates
+ * at read time.
+ *
+ * For 'bs' transactions: returns amount as-is.
+ * For others: returns amount × storedRate.
+ */
+export function toBsWithStoredRate(
+  amount: number,
+  currency: string,
+  storedRate: number,
+): number {
+  if (currency === 'bs') return amount;
+  if (storedRate > 0) return amount * storedRate;
+  // Fallback: no rate available, return raw amount
+  return amount;
+}
+
 // ── Bs → Any currency ──
 
 /** Bs → USDT (Binance P2P) */

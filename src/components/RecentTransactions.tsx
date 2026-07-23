@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { Inbox, ListFilter } from "lucide-react-native/icons";
+import { Inbox } from "lucide-react-native/icons";
 
 import { AnimatedSection } from "@/components/AnimatedSection";
 import { SwipeableTransactionRow } from "@/components/SwipeableTransactionRow";
@@ -8,6 +8,7 @@ import type { Transaction } from "@/types";
 import type { ThemeColors } from "@/store/theme-store";
 
 interface RecentTransactionsProps {
+    title: string;
     transactions: Transaction[];
     isLoading: boolean;
     colors: ThemeColors;
@@ -15,11 +16,12 @@ interface RecentTransactionsProps {
     onDeleteTransaction: (transactionId: number) => void;
     onTransactionPress: (type: Transaction['type'], tx: Transaction) => void;
     onAddFirstTransaction?: () => void;
-    onNavigateToTransactions: () => void;
+    emptyMessage?: string;
     getCategoryInfo: (categoryId: number) => { name: string; icon: string; color: string } | undefined;
 }
 
 export function RecentTransactions({
+    title,
     transactions,
     isLoading,
     colors,
@@ -27,7 +29,7 @@ export function RecentTransactions({
     onDeleteTransaction,
     onTransactionPress,
     onAddFirstTransaction,
-    onNavigateToTransactions,
+    emptyMessage,
     getCategoryInfo,
 }: RecentTransactionsProps) {
     return (
@@ -48,11 +50,8 @@ export function RecentTransactions({
                         color: colors.onSurface,
                     }}
                 >
-                    Transacciones Recientes
+                    {title}
                 </Text>
-                <Pressable onPress={onNavigateToTransactions}>
-                    <ListFilter size={18} color={colors.onSurfaceVariant} />
-                </Pressable>
             </View>
 
             {isLoading ? (
@@ -84,23 +83,25 @@ export function RecentTransactions({
                                 color: colors.onSurfaceVariant,
                             }}
                         >
-                            No hay movimientos este mes
+                            {emptyMessage ?? "No hay movimientos este mes"}
                         </Text>
-                        <Pressable
-                            style={{
-                                marginTop: 16,
-                                paddingHorizontal: 20,
-                                paddingVertical: 8,
-                                borderRadius: 9999,
-                                borderWidth: 1,
-                                borderColor: `${colors.primary}99`,
-                            }}
-                            onPress={onAddFirstTransaction ?? (() => {})}
-                        >
-                            <Text style={{ fontFamily: "Inter", color: colors.primary, fontSize: 14 }}>
-                                Agregar primero
-                            </Text>
-                        </Pressable>
+                        {onAddFirstTransaction && (
+                            <Pressable
+                                style={{
+                                    marginTop: 16,
+                                    paddingHorizontal: 20,
+                                    paddingVertical: 8,
+                                    borderRadius: 9999,
+                                    borderWidth: 1,
+                                    borderColor: `${colors.primary}99`,
+                                }}
+                                onPress={onAddFirstTransaction}
+                            >
+                                <Text style={{ fontFamily: "Inter", color: colors.primary, fontSize: 14 }}>
+                                    Agregar
+                                </Text>
+                            </Pressable>
+                        )}
                     </View>
                 </AnimatedSection>
             ) : (

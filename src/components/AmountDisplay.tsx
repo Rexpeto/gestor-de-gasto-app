@@ -8,6 +8,7 @@ interface AmountDisplayProps {
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
+  bs: 'Bs',
   bsc: '$',
   eur: '€',
   usdt: 'USDT',
