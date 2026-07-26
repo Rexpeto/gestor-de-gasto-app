@@ -22,14 +22,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
     set({ isLoading: true });
     try {
       const categories = await db.getAllCategories();
-      if (categories.length === 0) {
-        console.warn('⚠️ loadCategories: array vacío — la DB devolvió 0 categorías');
-      } else {
-        console.log(`✅ loadCategories: ${categories.length} categorías cargadas`);
-      }
       set({ categories });
-    } catch (e) {
-      console.error('❌ loadCategories error:', e);
+    } catch {
     } finally {
       set({ isLoading: false });
     }

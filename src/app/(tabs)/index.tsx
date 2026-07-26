@@ -1,563 +1,207 @@
-import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, View } from "react-native";
 
-import { useCategoryStore } from '@/store/category-store';
-import { useSheetStore } from '@/store/sheet-store';
-import { useTransactionStore } from '@/store/transaction-store';
-import type { Transaction } from '@/types';
-import { useThemeColors } from '@/store/theme-store';
-import {
-  ArrowDownLeft,
-  CreditCard,
-  Inbox,
-  ListFilter,
-  Plus,
-  Repeat,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react-native/icons';
-
-const formatCurrency = (amount: number): string =>
-  `$${Math.abs(amount).toLocaleString('es-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const formatDate = (dateStr: string): string => {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
-/**
- * Transaction row used in dashboard + transactions screen
- */
-export function TransactionRow({
-  tx,
-  category,
-  onPress,
-  onLongPress,
-}: {
-  tx: Transaction;
-  category?: { name: string; icon: string; color: string };
-  onPress: () => void;
-  onLongPress?: () => void;
-}) {
-  const colors = useThemeColors();
-  return (
-    <Pressable
-      className="flex-row items-center px-4 py-3.5"
-      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-      onPress={onPress}
-      onLongPress={onLongPress}
-    >
-      <View
-        className="w-10 h-10 rounded-full items-center justify-center"
-        style={{ backgroundColor: (category?.color ?? '#6366f1') + '20' }}
-      >
-        <Text style={{ fontSize: 18 }}>{category?.icon ?? '📦'}</Text>
-      </View>
-      <View className="flex-1 ml-3">
-        <Text
-          className="text-sm font-medium"
-          style={{ fontFamily: 'Inter', color: colors.onSurface }}
-        >
-          {tx.description || category?.name || 'Sin categoría'}
-        </Text>
-        <Text
-          className="text-xs mt-0.5"
-          style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}
-        >
-          {category?.name || 'Sin categoría'} • {formatDate(tx.date)}
-        </Text>
-      </View>
-      <View className="items-end">
-        <Text
-          className="text-sm font-semibold"
-          style={{
-            fontFamily: 'Inter',
-            color: tx.type === 'income' ? colors.primary : colors.error,
-          }}
-        >
-          {tx.type === 'income' ? '+ ' : '- '}
-          {formatCurrency(tx.amount)}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
+import { AnimatedSection } from "@/components/AnimatedSection";
+import { CategorySummaryList } from "@/components/CategorySummaryList";
+import { CreditCard } from "@/components/CreditCard";
+import { QuickActions } from "@/components/QuickActions";
+import { RecentTransactions } from "@/components/RecentTransactions";
+import { showAlert } from "@/store/alert-store";
+import { useBudgetStore } from "@/store/budget-store";
+import { useCategoryStore } from "@/store/category-store";
+import { usePreferencesStore } from "@/store/preferences-store";
+import { useRateStore } from "@/store/rate-store";
+import { useSheetStore } from "@/store/sheet-store";
+import { useThemeColors } from "@/store/theme-store";
+import { useTransactionStore } from "@/store/transaction-store";
+import type { Transaction } from "@/types";
 
 export default function DashboardScreen() {
-  const colors = useThemeColors();
-  const openSheet = useSheetStore((s) => s.openSheet);
+    const colors = useThemeColors();
+    const openSheet = useSheetStore((s) => s.openSheet);
 
-  const transactions = useTransactionStore((s) => s.transactions);
-  const monthlySummary = useTransactionStore((s) => s.monthlySummary);
-  const categorySummaries = useTransactionStore((s) => s.categorySummaries);
-  const categories = useCategoryStore((s) => s.categories);
-  const isLoading = useTransactionStore((s) => s.isLoading);
+    const transactions = useTransactionStore((s) => s.transactions);
+    const monthlySummary = useTransactionStore((s) => s.monthlySummary);
+    const incomeCategorySummaries = useTransactionStore((s) => s.incomeCategorySummaries);
+    const expenseCategorySummaries = useTransactionStore((s) => s.expenseCategorySummaries);
+    const categories = useCategoryStore((s) => s.categories);
+    const budgets = useBudgetStore((s) => s.budgets);
+    const isLoading = useTransactionStore((s) => s.isLoading);
 
-  const balance = monthlySummary?.balance ?? 0;
-  const totalIncome = monthlySummary?.totalIncome ?? 0;
-  const totalExpense = monthlySummary?.totalExpense ?? 0;
+    const monthlyBudget = usePreferencesStore((s) => s.monthlyBudget);
+    const budgetCurrency = usePreferencesStore((s) => s.budgetCurrency);
+    const budgetRate = usePreferencesStore((s) => s.budgetRate);
+    const totalIncome = monthlySummary?.totalIncome ?? 0; // Already in Bs
+    const totalExpense = monthlySummary?.totalExpense ?? 0; // Already in Bs
 
-  const getCategoryInfo = useCallback(
-    (categoryId: number) => categories.find((c) => c.id === categoryId),
-    [categories],
-  );
+    const getCategoryInfo = useCallback(
+        (categoryId: number) => categories.find((c) => c.id === categoryId),
+        [categories],
+    );
 
-  const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+    const expenseTransactions = useMemo(
+        () => transactions.filter((t) => t.type === "expense"),
+        [transactions],
+    );
 
-  const topExpenseCategories = useMemo(
-    () =>
-      categorySummaries
-        .filter((c) => c.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 4),
-    [categorySummaries],
-  );
+    const incomeTransactions = useMemo(
+        () => transactions.filter((t) => t.type === "income"),
+        [transactions],
+    );
 
-  return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 96 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Sticky Header ── */}
+    const topIncomeCategories = useMemo(
+        () =>
+            incomeCategorySummaries
+                .filter((c) => c.total > 0)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 4),
+        [incomeCategorySummaries],
+    );
 
-        {/* ── Hero Balance Card ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
-          <View
-            style={{
-              backgroundColor: colors.glassSurface,
-              borderWidth: 1,
-              borderColor: colors.glassBorder,
-              borderRadius: 12,
-              padding: 24,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Gradient blur decorations */}
-            <View
-              style={{
-                position: 'absolute',
-                top: -30,
-                right: -30,
-                width: 120,
-                height: 120,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}26`,
-              }}
-            />
-            <View
-              style={{
-                position: 'absolute',
-                bottom: -40,
-                left: -20,
-                width: 100,
-                height: 100,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}14`,
-              }}
-            />
+    const topExpenseCategories = useMemo(
+        () =>
+            expenseCategorySummaries
+                .filter((c) => c.total > 0)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 4),
+        [expenseCategorySummaries],
+    );
 
-            {/* Label caps */}
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                letterSpacing: 0.1,
-                color: colors.onSurfaceVariant,
-                marginBottom: 4,
-              }}
-            >
-              Saldo Total
-            </Text>
+    const removeTransaction = useTransactionStore((s) => s.removeTransaction);
 
-            {/* Main amount */}
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 40,
-                fontWeight: '700',
-                color: colors.onSurface,
-                letterSpacing: -0.02,
-              }}
-            >
-              {formatCurrency(balance)}
-            </Text>
+    const handleEditTransaction = useCallback(
+        (transactionId: number) => {
+            const tx = transactions.find((t) => t.id === transactionId);
+            if (tx) openSheet(tx.type, tx);
+        },
+        [transactions, openSheet],
+    );
 
-            {/* Bottom row: Ingresos + Gastos + Avatars */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: 20,
-              }}
-            >
-              {/* Left: income/expense pills */}
-              <View style={{ flexDirection: 'row', gap: 20 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingUp size={14} color={colors.primary} />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
-                    Ingresos
-                  </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.primary }}>
-                    {formatCurrency(totalIncome)}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingDown size={14} color={colors.error} />
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant }}>
-                    Gastos
-                  </Text>
-                  <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: colors.error }}>
-                    {formatCurrency(totalExpense)}
-                  </Text>
-                </View>
-              </View>
+    const handleDeleteTransaction = useCallback(
+        async (transactionId: number) => {
+            try {
+                await removeTransaction(transactionId);
+            } catch {
+                showAlert("Error", "No se pudo eliminar la transacción");
+            }
+        },
+        [removeTransaction],
+    );
 
-              {/* Right: stacked avatars */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9999,
-                    backgroundColor: colors.surfaceContainer,
-                    borderWidth: 2,
-                    borderColor: colors.background,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: '700', color: colors.onSurface }}>
-                    VISA
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9999,
-                    backgroundColor: colors.primary,
-                    borderWidth: 2,
-                    borderColor: colors.background,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: -12,
-                  }}
-                >
-                  <Plus size={14} color={colors.onPrimary} />
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
+    const handleTransactionPress = useCallback(
+        (type: Transaction['type'], tx: Transaction) => openSheet(type, tx),
+        [openSheet],
+    );
 
-        {/* ── Quick Actions ── */}
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 20 }}>
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: `${colors.primary}1A`,
-            }}
-            onPress={() => openSheet('income')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: `${colors.primary}26`,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ArrowDownLeft size={20} color={colors.primary} />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Ingresar
-            </Text>
-          </Pressable>
+    const [refreshing, setRefreshing] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
 
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: 'rgba(138, 180, 248, 0.1)',
-            }}
-            onPress={() => openSheet('expense')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: 'rgba(138, 180, 248, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Repeat size={20} color="#8ab4f8" />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Transferir
-            </Text>
-          </Pressable>
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            const txStore = useTransactionStore.getState();
+            const catStore = useCategoryStore.getState();
+            const rateStore = useRateStore.getState();
+            const prefsStore = usePreferencesStore.getState();
+            await Promise.all([
+                txStore.loadTransactions(),
+                txStore.loadMonthlySummary(),
+                txStore.loadCategorySummaries(),
+                catStore.loadCategories(),
+                rateStore.loadRates(),
+                prefsStore.loadPreferences(),
+            ]);
+            // Pre-load daily rates for the current month
+            const now = new Date();
+            await rateStore.loadDailyRates(now.getFullYear(), now.getMonth() + 1);
+            setRefreshKey((k) => k + 1);
+        } finally {
+            setRefreshing(false);
+        }
+    }, []);
 
-          <Pressable
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 12,
-              backgroundColor: 'rgba(206, 147, 216, 0.1)',
-            }}
-            onPress={() => openSheet('expense')}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 9999,
-                backgroundColor: 'rgba(206, 147, 216, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CreditCard size={20} color="#ce93d8" />
-            </View>
-            <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '500', color: colors.onSurface }}>
-              Pagar
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* ── Gastos por Categoría ── */}
-        {topExpenseCategories.length > 0 && (
-          <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text
-                style={{
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: colors.onSurface,
-                }}
-              >
-                Gastos por Categoría
-              </Text>
-              <Pressable onPress={() => router.push('/(tabs)/transactions')}>
-                <Text
-                  style={{
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    fontWeight: '500',
-                    color: colors.primary,
-                  }}
-                >
-                  Ver todo
-                </Text>
-              </Pressable>
-            </View>
-
-            <View
-              style={{
-                backgroundColor: colors.glassSurface,
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                borderRadius: 12,
-                padding: 16,
-                gap: 16,
-              }}
-            >
-              {topExpenseCategories.map((cat) => (
-                <View key={cat.categoryId}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    {/* Icon circle */}
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 9999,
-                        backgroundColor: (cat.categoryColor || '#6366f1') + '20',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ fontSize: 18 }}>{cat.categoryIcon}</Text>
-                    </View>
-
-                    {/* Name + amounts */}
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <Text
-                          style={{
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: '500',
-                            color: colors.onSurface,
-                          }}
-                        >
-                          {cat.categoryName}
-                        </Text>
-                        <Text
-                          style={{
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: colors.onSurface,
-                          }}
-                        >
-                          {formatCurrency(cat.total)}
-                        </Text>
-                      </View>
-
-                      {/* Progress bar */}
-                      <View
-                        style={{
-                          height: 6,
-                          borderRadius: 9999,
-                          overflow: 'hidden',
-                          backgroundColor: colors.glassBorderStrong,
-                        }}
-                      >
-                        <View
-                          style={{
-                            height: '100%',
-                            width: `${cat.percentage}%`,
-                            borderRadius: 9999,
-                            backgroundColor: cat.categoryColor || '#57f1db',
-                          }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* ── Transacciones Recientes ── */}
-        <View style={{ marginTop: 28, paddingHorizontal: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: '600',
-                color: colors.onSurface,
-              }}
-            >
-              Transacciones Recientes
-            </Text>
-            <Pressable onPress={() => router.push('/(tabs)/transactions')}>
-              <ListFilter size={18} color={colors.onSurfaceVariant} />
-            </Pressable>
-          </View>
-
-          {isLoading ? (
-            <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Inter', color: colors.onSurfaceVariant }}>Cargando...</Text>
-            </View>
-          ) : recentTransactions.length === 0 ? (
-            <View
-              style={{
-                backgroundColor: colors.glassSurface,
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                borderRadius: 12,
-                padding: 32,
-                alignItems: 'center',
-              }}
-            >
-              <Inbox size={48} color={colors.onSurfaceVariant} />
-              <Text
-                style={{
-                  textAlign: 'center',
-                  marginTop: 12,
-                  fontFamily: 'Inter',
-                  color: colors.onSurfaceVariant,
-                }}
-              >
-                No hay movimientos este mes
-              </Text>
-              <Pressable
-                style={{
-                  marginTop: 16,
-                  paddingHorizontal: 20,
-                  paddingVertical: 8,
-                  borderRadius: 9999,
-                  borderWidth: 1,
-                  borderColor: `${colors.primary}66`,
-                }}
-                onPress={() => openSheet('expense')}
-              >
-                <Text style={{ fontFamily: 'Inter', color: colors.primary, fontSize: 14 }}>
-                  Agregar primero
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View
-              style={{
-                backgroundColor: colors.glassSurface,
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                borderRadius: 12,
-                overflow: 'hidden',
-              }}
-            >
-              {recentTransactions.map((tx: Transaction, index: number) => {
-                const category = getCategoryInfo(tx.categoryId);
-                return (
-                  <View key={tx.id}>
-                    {index > 0 && (
-                      <View
-                        style={{
-                          height: 1,
-                          backgroundColor: colors.glassBorder,
-                          marginLeft: 56,
-                        }}
-                      />
-                    )}
-                    <TransactionRow
-                      tx={tx}
-                      category={category}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/add-transaction',
-                          params: { id: tx.id },
-                        })
-                      }
+    return (
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingBottom: 96 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
                     />
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+                }
+            >
+                <View key={refreshKey}>
+                {/* ── Hero Balance Card ── */}
+                <AnimatedSection delay={100} duration={600} style={{ paddingHorizontal: 20, paddingTop: 40 }}>
+                    <CreditCard
+                        budgetAmount={monthlyBudget}
+                        budgetCurrency={budgetCurrency}
+                        budgetRate={budgetRate}
+                        totalIncome={totalIncome}
+                        totalExpense={totalExpense}
+                    />
+                </AnimatedSection>
 
-    </View>
-  );
+                {/* ── Quick Actions ── */}
+                <QuickActions
+                    onIncomePress={() => openSheet("income")}
+                    onExpensePress={() => openSheet("expense")}
+                />
+
+                {/* ── Gastos del mes ── */}
+                <RecentTransactions
+                    title="Gastos del mes"
+                    transactions={expenseTransactions}
+                    isLoading={isLoading}
+                    colors={colors}
+                    onEditTransaction={handleEditTransaction}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    onTransactionPress={handleTransactionPress}
+                    onAddFirstTransaction={() => openSheet("expense")}
+                    emptyMessage="No hay gastos este mes"
+                    getCategoryInfo={getCategoryInfo}
+                />
+
+                {/* ── Ingresos extra del mes ── */}
+                <RecentTransactions
+                    title="Ingresos extra del mes"
+                    transactions={incomeTransactions}
+                    isLoading={isLoading}
+                    colors={colors}
+                    onEditTransaction={handleEditTransaction}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    onTransactionPress={handleTransactionPress}
+                    onAddFirstTransaction={() => openSheet("income")}
+                    emptyMessage="No hay ingresos este mes"
+                    getCategoryInfo={getCategoryInfo}
+                />
+
+                {/* ── Ingresos por Categoría ── */}
+                <CategorySummaryList
+                    title="Ingresos por Categoría"
+                    categories={topIncomeCategories}
+                    budgets={budgets}
+                    colors={colors}
+                    delay={700}
+                    type="income"
+                />
+
+                {/* ── Gastos por Categoría ── */}
+                <CategorySummaryList
+                    title="Gastos por Categoría"
+                    categories={topExpenseCategories}
+                    budgets={budgets}
+                    colors={colors}
+                    delay={900}
+                    type="expense"
+                />
+                </View>
+            </ScrollView>
+        </View>
+    );
 }

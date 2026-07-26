@@ -15,6 +15,11 @@ export interface Transaction {
   categoryId: number;
   description: string;
   date: string; // ISO 8601 (YYYY-MM-DD)
+  currency: string;
+  /** Price the user entered (in original currency) */
+  priceOriginal: number;
+  /** Price converted to Bs using the day's exchange rate */
+  priceCalculated: number;
   createdAt: string;
 }
 
@@ -24,6 +29,7 @@ export interface TransactionFormData {
   categoryId: number;
   description: string;
   date: string;
+  currency?: string;
 }
 
 export interface MonthlySummary {
@@ -40,4 +46,28 @@ export interface CategorySummary {
   categoryColor: string;
   total: number;
   percentage: number;
+  currency: string; // dominant currency ('usdt' | 'bsc' | 'eur') — 'mixed' if varied
+}
+
+// ─── Exchange Rates ─────────────────────────────────────────────
+
+export interface MonthlyRates {
+  month: number; // 0-11
+  year: number;
+  p2pRate: number;   // Bs per USDT
+  bcvUsdRate: number; // Bs per USD
+  bcvEurRate: number; // Bs per EUR
+}
+
+export interface DailyRates {
+  date: string; // "YYYY-MM-DD"
+  p2pRate: number;
+  bcvUsdRate: number;
+  bcvEurRate: number;
+}
+
+export interface ConversionResult {
+  bs: number;  // Bolívares (P2P)
+  usd: number; // Dólares (BCV)
+  eur: number; // Euros (BCV)
 }
