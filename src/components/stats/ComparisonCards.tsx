@@ -1,22 +1,26 @@
-import { Text, View } from "react-native";
 import { useThemeColors } from "@/store/theme-store";
-import { TrendBadge, trendColor } from "./TrendBadge";
+import { Text, View } from "react-native";
 import type { Trend } from "./TrendBadge";
+import { TrendBadge, trendColor } from "./TrendBadge";
 
 interface ComparisonCardsProps {
-    thisMonth: number;
-    lastMonth: number | null;
+    thisPeriod: number;
+    lastPeriod: number | null;
     percentChange: number | null;
+    currentLabel: string;
+    previousLabel: string;
 }
 
 /**
- * Two side-by-side summary cards: "Este mes" vs "Mes pasado" with trend indicator.
+ * Two side-by-side summary cards: current vs previous period with trend indicator.
  * Matches Stitch design: surface-container bg, subtle border, mono-data amounts.
  */
 export function ComparisonCards({
-    thisMonth,
-    lastMonth,
+    thisPeriod,
+    lastPeriod,
     percentChange,
+    currentLabel,
+    previousLabel,
 }: ComparisonCardsProps) {
     const colors = useThemeColors();
 
@@ -30,8 +34,15 @@ export function ComparisonCards({
             : "same";
 
     return (
-        <View style={{ flexDirection: "row", marginHorizontal: 20, gap: 12, marginBottom: 16 }}>
-            {/* Este mes */}
+        <View
+            style={{
+                flexDirection: "row",
+                marginHorizontal: 20,
+                gap: 12,
+                marginBottom: 16,
+            }}
+        >
+            {/* Current period */}
             <View
                 style={{
                     flex: 1,
@@ -52,9 +63,16 @@ export function ComparisonCards({
                         color: colors.onSurfaceVariant,
                     }}
                 >
-                    Este mes
+                    {currentLabel}
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 6 }}>
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "baseline",
+                        gap: 6,
+                        marginTop: 6,
+                    }}
+                >
                     <Text
                         style={{
                             fontFamily: "Geist",
@@ -63,10 +81,17 @@ export function ComparisonCards({
                             color: colors.onSurface,
                         }}
                     >
-                        ${thisMonth.toLocaleString("es-ES", { minimumFractionDigits: 0 })}
+                        {`Bs ${thisPeriod.toLocaleString("es-ES", {
+                            minimumFractionDigits: 0,
+                        })}`}
                     </Text>
                     {percentChange !== null && (
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                            }}
+                        >
                             <TrendBadge trend={trend} />
                             <Text
                                 style={{
@@ -85,7 +110,7 @@ export function ComparisonCards({
                 </View>
             </View>
 
-            {/* Mes pasado */}
+            {/* Previous period */}
             <View
                 style={{
                     flex: 1,
@@ -106,9 +131,15 @@ export function ComparisonCards({
                         color: colors.onSurfaceVariant,
                     }}
                 >
-                    Mes pasado
+                    {previousLabel}
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "baseline", marginTop: 6 }}>
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "baseline",
+                        marginTop: 6,
+                    }}
+                >
                     <Text
                         style={{
                             fontFamily: "Geist",
@@ -117,8 +148,8 @@ export function ComparisonCards({
                             color: colors.onSurface,
                         }}
                     >
-                        {lastMonth !== null
-                            ? `$${lastMonth.toLocaleString("es-ES", { minimumFractionDigits: 0 })}`
+                        {lastPeriod !== null
+                            ? `Bs ${lastPeriod.toLocaleString("es-ES", { minimumFractionDigits: 0 })}`
                             : "—"}
                     </Text>
                 </View>

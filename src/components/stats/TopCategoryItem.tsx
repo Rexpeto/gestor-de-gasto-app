@@ -1,7 +1,6 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { Text, View } from "react-native";
 import { useThemeColors } from "@/store/theme-store";
-import { TrendBadge, trendLabel, trendColor } from "./TrendBadge";
+import { Text, View } from "react-native";
 import type { Trend } from "./TrendBadge";
 
 interface TopCategoryItemProps {
@@ -88,7 +87,9 @@ export function TopCategoryItem({
                             color: colors.onSurface,
                         }}
                     >
-                        ${total.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
+                        {`Bs ${total.toLocaleString("es-ES", {
+                            minimumFractionDigits: 2,
+                        })}`}
                     </Text>
                 </View>
 
@@ -109,40 +110,6 @@ export function TopCategoryItem({
                             backgroundColor: categoryColor,
                         }}
                     />
-                </View>
-
-                {/* Percentage + Trend row */}
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: "Geist",
-                            fontSize: 12,
-                            fontWeight: "600",
-                            letterSpacing: 0.05,
-                            color: colors.onSurfaceVariant,
-                        }}
-                    >
-                        {percentage.toFixed(1)}% del presupuesto
-                    </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <TrendBadge trend={trend} />
-                        <Text
-                            style={{
-                                fontFamily: "Inter",
-                                fontSize: 12,
-                                color: trendColor(trend, colors),
-                                marginLeft: 2,
-                            }}
-                        >
-                            {trendLabel(trend, percentage)}
-                        </Text>
-                    </View>
                 </View>
             </View>
         </View>

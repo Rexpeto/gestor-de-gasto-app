@@ -1,10 +1,15 @@
 import { router } from "expo-router";
 import { CircleDollarSign, Database, Landmark, Palette, Tags } from "lucide-react-native/icons";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { Image } from "expo-image";
+import * as Linking from "expo-linking";
 
 import { GlassCard } from "@/components/settings/GlassCard";
 import { NavRow } from "@/components/settings/NavRow";
 import { useThemeColors } from "@/store/theme-store";
+
+const REXPETO_AVATAR = require("../../../assets/images/rexpeto.jpg");
+const APP_VERSION = "1.0.0";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -105,6 +110,48 @@ export default function SettingsScreen() {
                         </View>
                     ))}
                 </GlassCard>
+
+                {/* ── Avatar & Credits ── */}
+                <View style={{ alignItems: "center", paddingVertical: 16, gap: 8 }}>
+                    <Image
+                        source={REXPETO_AVATAR}
+                        style={{
+                            width: 72,
+                            height: 72,
+                            borderRadius: 9999,
+                            borderWidth: 2,
+                            borderColor: colors.glassBorderStrong,
+                        }}
+                        contentFit="cover"
+                        transition={200}
+                    />
+                    <Pressable
+                        onPress={() =>
+                            Linking.openURL("https://www.github.com/rexpeto")
+                        }
+                    >
+                        <Text
+                            style={{
+                                fontFamily: "Inter",
+                                fontSize: 16,
+                                fontWeight: "600",
+                                color: colors.primary,
+                            }}
+                        >
+                            Rexpeto
+                        </Text>
+                    </Pressable>
+                    <Text
+                        style={{
+                            fontFamily: "Inter",
+                            fontSize: 12,
+                            color: colors.onSurfaceVariant,
+                            opacity: 0.6,
+                        }}
+                    >
+                        v{APP_VERSION}
+                    </Text>
+                </View>
             </View>
         </ScrollView>
     );

@@ -439,6 +439,30 @@ export async function getTransactionsByMonth(
   return rows.map(mapTransaction);
 }
 
+export async function getTransactionsByDateRange(
+  startDate: string,
+  endDate: string
+): Promise<Transaction[]> {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<{
+    id: number;
+    amount: number;
+    type: string;
+    category_id: number;
+    description: string;
+    date: string;
+    currency: string;
+    price_original: number;
+    price_calculated: number;
+    created_at: string;
+  }>(
+    "SELECT t.* FROM transactions t WHERE t.date BETWEEN ? AND ? ORDER BY t.date DESC, t.created_at DESC",
+    [startDate, endDate]
+  );
+
+  return rows.map(mapTransaction);
+}
+
 export async function createTransaction(params: {
   amount: number;
   type: TransactionType;

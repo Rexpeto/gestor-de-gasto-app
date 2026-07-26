@@ -1,7 +1,6 @@
-import React from "react";
-import { Text, View } from "react-native";
-import Svg, { Circle, G } from "react-native-svg";
 import { useThemeColors } from "@/store/theme-store";
+import { Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
 import type { CategorySummary } from "@/types";
 
@@ -77,8 +76,7 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
                     {segments.map((seg, i) => {
                         const dashLength = CIRCUMFERENCE * seg.percent;
                         const gapLength = CIRCUMFERENCE - dashLength;
-                        const dashOffset =
-                            CIRCUMFERENCE * (0.25 - seg.offset); // -90° rotation
+                        const dashOffset = CIRCUMFERENCE * (0.25 - seg.offset); // -90° rotation
                         return (
                             <Circle
                                 key={i}
@@ -112,10 +110,9 @@ export function GlassPieChart({ data, totalLabel }: GlassPieChartProps) {
                             lineHeight: 28,
                         }}
                     >
-                        $
-                        {total.toLocaleString("es-ES", {
+                        {`Bs ${total.toLocaleString("es-ES", {
                             minimumFractionDigits: 0,
-                        })}
+                        })}`}
                     </Text>
                     <Text
                         style={{
