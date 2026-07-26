@@ -142,15 +142,15 @@ export const useRateStore = create<RateState>((set, get) => ({
     },
 
     getRateForDate: async (date) => {
-        //周六周日使用周五的汇率（BCV周末不更新）
+        //周六周日使用周一的汇率（BCV周末不更新）
         const d = new Date(date + 'T00:00:00');
         const day = d.getDay(); // 0=Sun, 6=Sat
         let lookupDate = date;
-        if (day === 6) { // Saturday → Friday
-            d.setDate(d.getDate() - 1);
+        if (day === 6) { // Saturday → Monday
+            d.setDate(d.getDate() + 2);
             lookupDate = d.toISOString().split('T')[0];
-        } else if (day === 0) { // Sunday → Friday
-            d.setDate(d.getDate() - 2);
+        } else if (day === 0) { // Sunday → Monday
+            d.setDate(d.getDate() + 1);
             lookupDate = d.toISOString().split('T')[0];
         }
 

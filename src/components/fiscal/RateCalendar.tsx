@@ -69,12 +69,28 @@ export function RateCalendar({
         setSelectedDate(null);
     }, [month, year]);
 
+    // Resolve rate for a date, falling back to Monday for weekends
+    function resolveRateForDate(dateStr: string) {
+        if (ratesByDate[dateStr]) return ratesByDate[dateStr];
+        const d = new Date(dateStr + "T00:00:00");
+        const day = d.getDay();
+        if (day === 6) {
+            d.setDate(d.getDate() + 2);
+        } else if (day === 0) {
+            d.setDate(d.getDate() + 1);
+        }
+        const monday = d.toISOString().split("T")[0];
+        return ratesByDate[monday] ?? null;
+    }
+
     // Auto-fill rates from BCV data when today is selected on mount
     useEffect(() => {
-        if (selectedDate && ratesByDate[selectedDate]) {
-            const rate = ratesByDate[selectedDate];
-            if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
-            if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
+        if (selectedDate) {
+            const rate = resolveRateForDate(selectedDate);
+            if (rate) {
+                if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
+                if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
+            }
         }
     }, [selectedDate, ratesByDate]);
 
@@ -90,11 +106,27 @@ export function RateCalendar({
             }
         > = {};
 
-        // Mark days that have BCV data
+        // Mark days that have BCV data (including weekends via Monday fallback)
         for (const dateStr of Object.keys(ratesByDate)) {
             const rate = ratesByDate[dateStr];
             if (rate.usd > 0 || rate.eur > 0) {
                 marks[dateStr] = { marked: true, dotColor: colors.success };
+            }
+        }
+
+        // Also mark weekends that resolve to a Monday with data
+        const allDates = Object.keys(marks);
+        for (const dateStr of allDates) {
+            const d = new Date(dateStr + "T00:00:00");
+            const day = d.getDay();
+            if (day === 6 || day === 0) {
+                // Find the Monday this weekend resolves to
+                const monday = new Date(d);
+                monday.setDate(monday.getDate() + (day === 6 ? 2 : 1));
+                const mondayStr = monday.toISOString().split("T")[0];
+                if (ratesByDate[mondayStr] && (ratesByDate[mondayStr].usd > 0 || ratesByDate[mondayStr].eur > 0)) {
+                    marks[dateStr] = { marked: true, dotColor: colors.success };
+                }
             }
         }
 
@@ -112,7 +144,7 @@ export function RateCalendar({
 
     function handleDayPress(day: DateData) {
         setSelectedDate(day.dateString);
-        const rate = ratesByDate[day.dateString];
+        const rate = resolveRateForDate(day.dateString);
         if (rate) {
             if (rate.usd > 0) onBcvUsdRateChange(String(Math.trunc(rate.usd * 1000) / 1000));
             if (rate.eur > 0) onBcvEurRateChange(String(Math.trunc(rate.eur * 1000) / 1000));
