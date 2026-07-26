@@ -6,8 +6,8 @@ import {
     Receipt,
     SlidersHorizontal,
 } from "lucide-react-native/icons";
-import { useCallback, useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { LayoutChangeEvent, Pressable, Text, View } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -42,8 +42,7 @@ const TABS: TabConfig[] = [
     },
 ];
 
-const CIRCLE_SIZE = 50;
-const TAB_WIDTH = 72;
+const CIRCLE_RATIO = 0.72; // circle size relative to navbar height
 
 // ── Bottom tab bar personalizado (Stitch floating pill) ──
 function BottomTabBar() {
@@ -51,6 +50,10 @@ function BottomTabBar() {
     const pathname = usePathname();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+
+    const [containerWidth, setContainerWidth] = useState(0);
+    const tabWidth = containerWidth > 0 ? containerWidth / TABS.length : 0;
+    const circleSize = tabWidth * CIRCLE_RATIO;
 
     const translateX = useSharedValue(0);
 
@@ -62,25 +65,25 @@ function BottomTabBar() {
 
     // Find active index and animate
     useEffect(() => {
+        if (tabWidth <= 0) return;
         const idx = TABS.findIndex((t) => isActive(t.path));
         if (idx >= 0) {
-            translateX.value = withSpring(idx * TAB_WIDTH, {
+            translateX.value = withSpring(idx * tabWidth, {
                 damping: 20,
                 stiffness: 300,
                 mass: 0.8,
             });
         }
-    }, [pathname, isActive, translateX]);
+    }, [pathname, isActive, translateX, tabWidth]);
 
     // Animated circle style
     const circleStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
     }));
 
-    // Glow halo
-    const glowStyle = useAnimatedStyle(() => ({
-        transform: [{ translateX: translateX.value }],
-    }));
+    const onLayout = (e: LayoutChangeEvent) => {
+        setContainerWidth(e.nativeEvent.layout.width);
+    };
 
     return (
         <View
@@ -88,9 +91,10 @@ function BottomTabBar() {
                 position: "absolute",
                 bottom: 24 + insets.bottom,
                 alignSelf: "center",
-                width: "80%",
-                maxWidth: 448,
+                width: "70%",
+                maxWidth: 380,
                 height: 64,
+                marginHorizontal: 16,
                 borderRadius: 9999,
                 backgroundColor: `${colors.surfaceContainer}CC`,
                 borderWidth: 1,
@@ -105,58 +109,36 @@ function BottomTabBar() {
                 overflow: "hidden",
             }}
         >
-            {/* Tabs row — centered, contains animated circles */}
+            {/* Tabs row — centered, contains animated circle */}
             <View
+                onLayout={onLayout}
                 style={{
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
                     position: "relative",
+                    width: "100%",
                 }}
             >
-                {/* Animated active circle indicator — inside tabs row */}
-                <Animated.View
-                    style={[
-                        {
-                            position: "absolute",
-                            width: CIRCLE_SIZE,
-                            height: CIRCLE_SIZE,
-                            borderRadius: 9999,
-                            backgroundColor: `${colors.primary}1A`,
-                            // Center circle in first tab: offset from row start
-                            left: (TAB_WIDTH - CIRCLE_SIZE) / 2,
-                            top: (64 - CIRCLE_SIZE) / 2,
-                            shadowColor: colors.primary,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 20,
-                            elevation: 8,
-                        },
-                        circleStyle,
-                    ]}
-                />
-
-                {/* Glow halo — inside tabs row */}
-                <Animated.View
-                    style={[
-                        {
-                            position: "absolute",
-                            width: CIRCLE_SIZE + 8,
-                            height: CIRCLE_SIZE + 8,
-                            borderRadius: 9999,
-                            backgroundColor: "transparent",
-                            borderWidth: 2,
-                            borderColor: `${colors.primary}15`,
-                            left: (TAB_WIDTH - CIRCLE_SIZE - 8) / 2,
-                            top: (64 - CIRCLE_SIZE - 8) / 2,
-                            shadowColor: colors.primary,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 25,
-                        },
-                        glowStyle,
-                    ]}
-                />
+                {/* Animated active circle indicator */}
+                {tabWidth > 0 && (
+                    <Animated.View
+                        style={[
+                            {
+                                position: "absolute",
+                                width: circleSize,
+                                height: circleSize,
+                                borderRadius: 9999,
+                                backgroundColor: `${colors.primary}10`,
+                                left: (tabWidth - circleSize) / 2,
+                                top: (64 - circleSize) / 2,
+                                borderWidth: 1.5,
+                                borderColor: `${colors.primary}25`,
+                            },
+                            circleStyle,
+                        ]}
+                    />
+                )}
 
                 {TABS.map((tab) => {
                     const active = isActive(tab.path);
@@ -168,7 +150,7 @@ function BottomTabBar() {
                                 if (!active) router.replace(tab.path);
                             }}
                             style={({ pressed }) => ({
-                                width: TAB_WIDTH,
+                                flex: 1,
                                 height: 64,
                                 alignItems: "center",
                                 justifyContent: "center",

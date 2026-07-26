@@ -116,53 +116,13 @@ export function CreditCard({
 
   // ── Counting animation ──
   const countAnim = useRef(new Animated.Value(0)).current;
+  const colorAnim = useRef(new Animated.Value(0)).current;
   const [animatedBalance, setAnimatedBalance] = useState(displayBalance);
   const fromRef = useRef(displayBalance);
   const toRef = useRef(displayBalance);
   const isAnimating = useRef(false);
-
-  // ── Pulse animation on amount change ──
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const [pulseColor, setPulseColor] = useState(colors.onSurface);
-  const [pulseFontSize, setPulseFontSize] = useState(30);
-  const prevRemainingRef = useRef(remainingBs);
-
-  useEffect(() => {
-    const prev = prevRemainingRef.current;
-    const curr = remainingBs;
-    prevRemainingRef.current = curr;
-
-    // Skip first render and toggle-triggered changes (same value)
-    if (prev === curr) return;
-
-    const isIncome = curr > prev;
-    const targetScale = isIncome ? 1.15 : 0.85;
-    const targetFontSize = isIncome ? 46 : 34;
-    const targetColor = isIncome ? '#22c55e' : colors.error; // green / red
-
-    // Set pulse state
-    setPulseColor(targetColor);
-    setPulseFontSize(targetFontSize);
-
-    // Animate scale up/down then back
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: targetScale,
-        duration: 200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
-      setPulseColor(colors.onSurface);
-      setPulseFontSize(40);
-    });
-  }, [remainingBs, colors.onSurface, colors.error, scaleAnim]);
+  const highlightColorRef = useRef(colors.onSurface);
+  const [animatedColor, setAnimatedColor] = useState(colors.onSurface);
 
   // Listen to countAnim and interpolate the displayed value
   useEffect(() => {
@@ -174,13 +134,63 @@ export function CreditCard({
     return () => countAnim.removeListener(listener);
   }, [countAnim]);
 
-  // Sync animatedBalance with displayBalance when not animating
+  // Listen to colorAnim and interpolate color
   useEffect(() => {
-    if (!isAnimating.current) {
+    const listener = colorAnim.addListener(({ value }) => {
+      // value: 1 = highlight, 0 = normal — lerp RGB
+      const target = highlightColorRef.current;
+      const normal = colors.onSurface;
+      // Parse hex to rgb, lerp, reassemble
+      const tr = parseInt(target.slice(1, 3), 16);
+      const tg = parseInt(target.slice(3, 5), 16);
+      const tb = parseInt(target.slice(5, 7), 16);
+      const nr = parseInt(normal.slice(1, 3), 16);
+      const ng = parseInt(normal.slice(3, 5), 16);
+      const nb = parseInt(normal.slice(5, 7), 16);
+      const r = Math.round(tr + (nr - tr) * (1 - value));
+      const g = Math.round(tg + (ng - tg) * (1 - value));
+      const b = Math.round(tb + (nb - tb) * (1 - value));
+      setAnimatedColor(`rgb(${r},${g},${b})`);
+    });
+    return () => colorAnim.removeListener(listener);
+  }, [colorAnim]);
+
+  // Animate counting when displayBalance changes (income/expense added)
+  useEffect(() => {
+    if (isAnimating.current) return; // toggle already animating
+    if (fromRef.current === displayBalance) return; // same value
+
+    fromRef.current = fromRef.current; // keep current animated position
+    toRef.current = displayBalance;
+
+    // Determine highlight color based on direction
+    const isIncome = displayBalance > fromRef.current;
+    highlightColorRef.current = isIncome ? '#22c55e' : colors.error;
+
+    countAnim.setValue(0);
+    colorAnim.setValue(1); // start at highlight
+    isAnimating.current = true;
+
+    Animated.parallel([
+      Animated.timing(countAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(colorAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      isAnimating.current = false;
       setAnimatedBalance(displayBalance);
       fromRef.current = displayBalance;
       toRef.current = displayBalance;
-    }
+      highlightColorRef.current = colors.onSurface;
+    });
   }, [displayBalance]);
 
   const toggleCurrency = () => {
@@ -276,11 +286,10 @@ export function CreditCard({
         <Animated.Text
           style={{
             fontFamily: 'Inter',
-            fontSize: pulseFontSize,
+            fontSize: 40,
             fontWeight: '700',
-            color: pulseColor,
+            color: animatedColor,
             letterSpacing: -0.02,
-            transform: [{ scale: scaleAnim }],
           }}
         >
           {formatAmount(animatedBalance)}
