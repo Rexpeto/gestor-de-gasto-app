@@ -96,6 +96,8 @@ export function SwipeableTransactionRow({
                         justifyContent: 'center',
                         alignItems: 'center',
                         backgroundColor: colors.primary,
+                        borderTopRightRadius: 12,
+                        borderBottomRightRadius: 12,
                     },
                     rightActionStyle,
                 ]}
@@ -139,6 +141,8 @@ export function SwipeableTransactionRow({
                         justifyContent: 'center',
                         alignItems: 'center',
                         backgroundColor: '#ef4444',
+                        borderTopLeftRadius: 12,
+                        borderBottomLeftRadius: 12,
                     },
                     leftActionStyle,
                 ]}
@@ -188,6 +192,7 @@ export function SwipeableTransactionRow({
                     style={[
                         {
                             zIndex: 1,
+                            borderRadius: 12,
                         },
                         contentStyle,
                     ]}
