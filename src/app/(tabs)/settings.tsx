@@ -9,7 +9,7 @@ import { NavRow } from "@/components/settings/NavRow";
 import { useThemeColors } from "@/store/theme-store";
 
 const REXPETO_AVATAR = require("../../../assets/images/rexpeto.jpg");
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
