@@ -36,13 +36,14 @@ export function CategorySummaryList({
     delay = 700,
     type = "expense",
 }: CategorySummaryListProps) {
+    // Hooks FIRST — Rules of React: never return before calling hooks
+    const getRates = useRateStore((s) => s.getRates);
+    const selectedMonth = useTransactionStore((s) => s.selectedMonth);
+    const selectedYear = useTransactionStore((s) => s.selectedYear);
+
     if (categories.length === 0) return null;
 
     const accentColor = type === "income" ? colors.success : colors.primary;
-    const getRates = useRateStore((s) => s.getRates);
-    // Use current month for budget conversion (same month as displayed categories)
-    const selectedMonth = useTransactionStore((s) => s.selectedMonth);
-    const selectedYear = useTransactionStore((s) => s.selectedYear);
     const rates = getRates(selectedMonth - 1, selectedYear); // 0-indexed for rate store
 
     return (

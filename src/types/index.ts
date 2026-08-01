@@ -16,6 +16,8 @@ export interface Transaction {
   description: string;
   date: string; // ISO 8601 (YYYY-MM-DD)
   currency: string;
+  /** Exchange rate used to convert to Bs (Bs per 1 unit of currency). 0 for Bs or when no rate was available */
+  exchangeRate: number;
   /** Price the user entered (in original currency) */
   priceOriginal: number;
   /** Price converted to Bs using the day's exchange rate */
@@ -30,6 +32,8 @@ export interface TransactionFormData {
   description: string;
   date: string;
   currency?: string;
+  /** Manual exchange rate (e.g. user-entered P2P rate for USDT income). Overrides auto-resolved rate when > 0 */
+  exchangeRate?: number;
 }
 
 export interface MonthlySummary {
