@@ -10,6 +10,7 @@ import { useSheetStore } from "@/store/sheet-store";
 import { useThemeColors } from "@/store/theme-store";
 import { useTransactionStore } from "@/store/transaction-store";
 import type { TransactionType } from "@/types";
+import { formatCurrency } from "@/utils/format";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import DateTimePicker, {
     type DateTimePickerEvent,
@@ -74,6 +75,7 @@ export const AddTransactionSheet = ({
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState("bsc");
+    const [exchangeRate, setExchangeRate] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [contentKey, setContentKey] = useState(0);
     const colors = useThemeColors();
@@ -94,6 +96,19 @@ export const AddTransactionSheet = ({
                 );
                 setShowDatePicker(false);
                 setPaymentMethod(editingTransaction.currency || "bsc");
+                // Prefill rate for income+USDT: stored rate, or derive from stored Bs result
+                const storedRate = editingTransaction.exchangeRate ?? 0;
+                const derivedRate =
+                    storedRate > 0
+                        ? storedRate
+                        : editingTransaction.amount > 0 &&
+                            editingTransaction.priceCalculated > 0
+                          ? editingTransaction.priceCalculated /
+                            editingTransaction.amount
+                          : 0;
+                setExchangeRate(
+                    derivedRate > 0 ? String(derivedRate) : "",
+                );
                 setIsSubmitting(false);
             } else {
                 // ── Create mode: reset ──
@@ -104,6 +119,7 @@ export const AddTransactionSheet = ({
                 setSelectedDate(new Date());
                 setShowDatePicker(false);
                 setPaymentMethod("bsc");
+                setExchangeRate("");
                 setIsSubmitting(false);
             }
             setContentKey((k) => k + 1);
@@ -160,28 +176,31 @@ export const AddTransactionSheet = ({
             return;
         }
 
+        // Income + USDT requires a manual exchange rate (Bs per USDT)
+        const rateNum = parseFloat(exchangeRate.replace(",", "."));
+        const needsRate = txType === "income" && paymentMethod === "usdt";
+        if (needsRate && (isNaN(rateNum) || rateNum <= 0)) {
+            showErrorToast("Ingresá la tasa de cambio en Bs por USDT");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const dateISO = selectedDate.toISOString().split("T")[0];
+            const txData = {
+                amount: amountNum,
+                type: txType,
+                categoryId,
+                description,
+                date: dateISO,
+                currency: paymentMethod,
+                exchangeRate: needsRate ? rateNum : undefined,
+            };
             if (editingTransaction) {
-                await editTransaction(editingTransaction.id, {
-                    amount: amountNum,
-                    type: txType,
-                    categoryId,
-                    description,
-                    date: dateISO,
-                    currency: paymentMethod,
-                });
+                await editTransaction(editingTransaction.id, txData);
                 showSuccessToast("Transacción actualizada");
             } else {
-                await addTransaction({
-                    amount: amountNum,
-                    type: txType,
-                    categoryId,
-                    description,
-                    date: dateISO,
-                    currency: paymentMethod,
-                });
+                await addTransaction(txData);
                 showSuccessToast("Transacción guardada");
             }
             onClose();
@@ -196,6 +215,7 @@ export const AddTransactionSheet = ({
         selectedDate,
         description,
         paymentMethod,
+        exchangeRate,
         addTransaction,
         editTransaction,
         editingTransaction,
@@ -213,11 +233,24 @@ export const AddTransactionSheet = ({
 
     const displayAmount = amount === "" ? "0" : amount;
 
+    // Live conversion preview for income + USDT (e.g. 100 USDT × 800 = 80.000 Bs)
+    const previewRate = parseFloat(exchangeRate.replace(",", "."));
+    const previewAmount = parseFloat(amount);
+    const showRatePreview =
+        txType === "income" &&
+        paymentMethod === "usdt" &&
+        !isNaN(previewAmount) &&
+        previewAmount > 0 &&
+        !isNaN(previewRate) &&
+        previewRate > 0;
+    const convertedBs = showRatePreview ? previewAmount * previewRate : 0;
+
     return (
         <BottomSheet
             ref={sheetRef}
             index={-1}
             snapPoints={["98%"]}
+            enableDynamicSizing={false}
             enablePanDownToClose
             onChange={(index) => {
                 if (index === -1) onClose();
@@ -283,6 +316,92 @@ export const AddTransactionSheet = ({
                         value={paymentMethod}
                         onChange={setPaymentMethod}
                     />
+
+                    {/* Exchange rate — only for income in USDT */}
+                    {txType === "income" && paymentMethod === "usdt" && (
+                        <View
+                            style={{ paddingHorizontal: 20, marginBottom: 20 }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: "Inter",
+                                    fontSize: 11,
+                                    fontWeight: "600",
+                                    color: colors.onSurfaceVariant,
+                                    textTransform: "uppercase",
+                                    letterSpacing: 1.2,
+                                    marginBottom: 10,
+                                }}
+                            >
+                                Tasa de cambio (Bs por USDT)
+                            </Text>
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    backgroundColor:
+                                        colors.surfaceContainerHigh,
+                                    borderWidth: 1,
+                                    borderColor: colors.glassBorder,
+                                    borderRadius: 16,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 4,
+                                    gap: 8,
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        fontFamily: "Inter",
+                                        fontSize: 13,
+                                        fontWeight: "600",
+                                        color: colors.primary,
+                                    }}
+                                >
+                                    Bs
+                                </Text>
+                                <TextInput
+                                    placeholder="Ej: 800"
+                                    placeholderTextColor={colors.outline}
+                                    value={exchangeRate}
+                                    onChangeText={(t) =>
+                                        setExchangeRate(
+                                            t.replace(/[^0-9.,]/g, ""),
+                                        )
+                                    }
+                                    keyboardType="decimal-pad"
+                                    style={{
+                                        flex: 1,
+                                        fontFamily: "Inter",
+                                        fontSize: 13,
+                                        color: colors.onSurface,
+                                        paddingVertical: 10,
+                                    }}
+                                />
+                            </View>
+                            {showRatePreview && (
+                                <Text
+                                    style={{
+                                        fontFamily: "Inter",
+                                        fontSize: 12,
+                                        color: colors.onSurfaceVariant,
+                                        marginTop: 8,
+                                    }}
+                                >
+                                    {formatCurrency(previewAmount)} USDT ×{" "}
+                                    {formatCurrency(previewRate)} ={" "}
+                                    <Text
+                                        style={{
+                                            fontFamily: "Inter-SemiBold",
+                                            fontWeight: "600",
+                                            color: colors.primary,
+                                        }}
+                                    >
+                                        {formatCurrency(convertedBs)} Bs
+                                    </Text>
+                                </Text>
+                            )}
+                        </View>
+                    )}
 
                     {/* Date picker row */}
                     <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gestor de Gastos",
     "slug": "gestor-gastos",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "gestorgastos",

@@ -225,13 +225,16 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
   addTransaction: async (data: TransactionFormData) => {
     const currency = data.currency ?? 'bsc';
-    const rate = await resolveExchangeRate(data.date, currency);
+    // Manual rate (income + USDT) takes precedence; otherwise auto-resolve
+    const manualRate = data.exchangeRate && data.exchangeRate > 0 ? data.exchangeRate : 0;
+    const rate = manualRate > 0 ? manualRate : await resolveExchangeRate(data.date, currency);
     const priceOriginal = data.amount;
     const priceCalculated = computePriceCalculated(data.amount, currency, rate);
 
     const txToSave = {
       ...data,
       currency,
+      exchangeRate: rate,
       priceOriginal,
       priceCalculated,
     };
@@ -246,7 +249,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
   editTransaction: async (id: number, data: Partial<TransactionFormData>) => {
     const currency = data.currency ?? 'bsc';
-    const rate = await resolveExchangeRate(data.date ?? '', currency);
+    // Manual rate (income + USDT) takes precedence; otherwise auto-resolve
+    const manualRate = data.exchangeRate && data.exchangeRate > 0 ? data.exchangeRate : 0;
+    const rate = manualRate > 0 ? manualRate : await resolveExchangeRate(data.date ?? '', currency);
     const priceOriginal = data.amount ?? 0;
     const priceCalculated = computePriceCalculated(priceOriginal, currency, rate);
 
@@ -257,6 +262,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       description: data.description,
       date: data.date,
       currency,
+      exchangeRate: rate,
       priceOriginal,
       priceCalculated,
     };

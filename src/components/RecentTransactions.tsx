@@ -111,7 +111,6 @@ export function RecentTransactions({
                         borderWidth: 1,
                         borderColor: colors.glassBorder,
                         borderRadius: 12,
-                        overflow: "hidden",
                     }}
                 >
                     {transactions.map((tx: Transaction, index: number) => {

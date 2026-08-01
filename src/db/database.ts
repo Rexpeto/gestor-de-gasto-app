@@ -404,6 +404,7 @@ export async function getAllTransactions(): Promise<Transaction[]> {
     description: string;
     date: string;
     currency: string;
+    exchange_rate: number;
     price_original: number;
     price_calculated: number;
     created_at: string;
@@ -428,6 +429,7 @@ export async function getTransactionsByMonth(
     description: string;
     date: string;
     currency: string;
+    exchange_rate: number;
     price_original: number;
     price_calculated: number;
     created_at: string;
@@ -452,6 +454,7 @@ export async function getTransactionsByDateRange(
     description: string;
     date: string;
     currency: string;
+    exchange_rate: number;
     price_original: number;
     price_calculated: number;
     created_at: string;
@@ -470,12 +473,13 @@ export async function createTransaction(params: {
   description: string;
   date: string;
   currency?: string;
+  exchangeRate?: number;
   priceOriginal?: number;
   priceCalculated?: number;
 }): Promise<Transaction> {
   const database = await getDatabase();
   const result = await database.runAsync(
-    'INSERT INTO transactions (amount, type, category_id, description, date, currency, price_original, price_calculated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO transactions (amount, type, category_id, description, date, currency, exchange_rate, price_original, price_calculated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       params.amount,
       params.type,
@@ -483,6 +487,7 @@ export async function createTransaction(params: {
       params.description,
       params.date,
       params.currency ?? 'bsc',
+      params.exchangeRate ?? 0,
       params.priceOriginal ?? params.amount,
       params.priceCalculated ?? params.amount,
     ]
@@ -496,6 +501,7 @@ export async function createTransaction(params: {
     description: string;
     date: string;
     currency: string;
+    exchange_rate: number;
     price_original: number;
     price_calculated: number;
     created_at: string;
@@ -514,6 +520,7 @@ export async function updateTransaction(
     description: string;
     date: string;
     currency?: string;
+    exchangeRate?: number;
     priceOriginal?: number;
     priceCalculated?: number;
   }>
@@ -548,6 +555,10 @@ export async function updateTransaction(
   if (params.currency !== undefined) {
     sets.push('currency = ?');
     bindings.push(params.currency);
+  }
+  if (params.exchangeRate !== undefined) {
+    sets.push('exchange_rate = ?');
+    bindings.push(params.exchangeRate);
   }
   if (params.priceOriginal !== undefined) {
     sets.push('price_original = ?');
@@ -945,6 +956,7 @@ function mapTransaction(row: {
   description: string;
   date: string;
   currency: string;
+  exchange_rate: number;
   price_original: number;
   price_calculated: number;
   created_at: string;
@@ -957,6 +969,7 @@ function mapTransaction(row: {
     description: row.description ?? '',
     date: row.date,
     currency: row.currency,
+    exchangeRate: row.exchange_rate ?? 0,
     priceOriginal: row.price_original ?? row.amount,
     priceCalculated: row.price_calculated ?? 0,
     createdAt: row.created_at,
@@ -1093,6 +1106,7 @@ export interface ExportData {
     date: string;
     createdAt: string;
     currency?: string; // optional for backward-compatible exports
+    exchangeRate?: number; // optional for backward-compatible exports
   }>;
   monthlyRates: Array<{
     month: number;
@@ -1135,6 +1149,7 @@ export async function exportDatabase(): Promise<string> {
     description: string;
     date: string;
     currency: string;
+    exchange_rate: number;
     created_at: string;
   }>('SELECT * FROM transactions ORDER BY id');
 
@@ -1182,6 +1197,7 @@ export async function exportDatabase(): Promise<string> {
       date: t.date,
       createdAt: t.created_at,
       currency: t.currency,
+      exchangeRate: t.exchange_rate ?? 0,
     })),
     monthlyRates: monthlyRates.map((r) => ({
       month: r.month,
@@ -1235,9 +1251,18 @@ export async function importDatabase(json: string): Promise<void> {
   for (const tx of data.transactions) {
     const categoryId = catNameToId.get(tx.categoryName);
     if (!categoryId) continue; // skip if category not found
+    const currency = tx.currency ?? 'bsc';
+    const exchangeRate = tx.exchangeRate ?? 0;
+    // Recompute the Bs equivalent from the exported rate (mirrors migration v9)
+    const priceCalculated =
+      exchangeRate > 0
+        ? tx.amount * exchangeRate
+        : currency === 'bs'
+          ? tx.amount
+          : 0;
     await database.runAsync(
-      'INSERT INTO transactions (amount, type, category_id, description, date, currency, price_original, price_calculated, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [tx.amount, tx.type, categoryId, tx.description, tx.date, tx.currency ?? 'bsc', tx.amount, 0, tx.createdAt],
+      'INSERT INTO transactions (amount, type, category_id, description, date, currency, exchange_rate, price_original, price_calculated, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [tx.amount, tx.type, categoryId, tx.description, tx.date, currency, exchangeRate, tx.amount, priceCalculated, tx.createdAt],
     );
   }
 
